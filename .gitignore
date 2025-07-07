@@ -1,0 +1,7 @@
+ClfAddons/
+Conllus/
+slurm_archive/
+SnippetDatasets/
+TestResults/
+Keylists.jsonl
+*.sh
