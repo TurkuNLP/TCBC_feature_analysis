@@ -12,6 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import logging
 import itertools
 import string
+from collections import Counter
 
 #CONSTANTS
 
@@ -656,7 +657,7 @@ def dfToLowercase(df):
 
 def getNumOfSentences(corpus: dict) -> dict:
     """
-    Function for returning the amount ot sentences for each book in the corpus
+    Function for returning the amount of main clauses for each book in the corpus
     :param corpus: Dict with form [id, pd.DataFrame]. where df has sentence data
     :return:dict of form [id, int]
     """
@@ -953,20 +954,18 @@ def scaleCorpusData(corpus_data: dict[str,float], scaling_data: dict[str,float])
         returnable[key] = corpus_data[key]/scaling_data[key]
     return returnable
 
-def getPosNGramForCorpus(corpus: dict[str,pd.DataFrame], n: int) -> dict[str, pd.Series]:
+def getPosNGramForCorpus(corpus: dict[str,pd.DataFrame], n: int) -> dict[str, Counter]:
     """
-    Function for getting wanted length POS n-gram for each book in corpus
+    Function for getting the number of wanted length POS n-grams for each book in corpus
     """
-
     returnable = {}
     for key in corpus:
         df = corpus[key]['upos']
-        n_grams = {}
+        n_grams = []
         for i in range(len(df)-(n-1)):
-            n_grams[i] = df.iloc[i:i+n].to_numpy(str)
-        for i in range(len(df)-(n-1), len(df)):
-            n_grams[i] = ""
-        returnable[key] = pd.Series(n_grams)
+            n_grams += [list(df.iloc[i:i+n].to_numpy(str))]
+        n_grams = map(tuple, n_grams)
+        returnable[key] = Counter(n_grams)
     return returnable
 
 def getFleschKincaidGradeLevel(corpus: dict):
@@ -983,13 +982,13 @@ def buildIdTreeFromConllu(conllu: pd.DataFrame) -> dict[int,list[int]]:
     """
     Build a tree for each sentence in a conllu file, where each node points to the corresponding DataFrame row of a line in the conllu-file
     """
-    conllu['id'] = conllu['id'].apply(lambda x: int(x))
+    #conllu['id'] = conllu['id'].apply(lambda x: int(x))
     id_tree = {}
     #First fetch ids marking boundaries for each sentence
     sentence_ids = []
     start = 0
     for i in range(1,len(conllu)):
-        if conllu.loc[i]['id'] == 1:
+        if conllu.loc[i]['id'] == '1':
             sentence_ids.append((start,i-1))
             start = i
     sentence_ids.append((start, len(conllu)))
@@ -1030,6 +1029,37 @@ def getMeanSyntacticTreeDepth(tree):
         depths.append(getDepthOfTree(head, tree[head]))
     return np.mean(depths)
 
+def getIdTreeNGram(tree, prev_round=[]):
+    """
+    Recursively add layers to the n-grams.
+    Returns a list of lists, which consist of ids. Amount per list is the specified n.
+    """
+    current_round = []
+    for gram in prev_round:
+        if len(tree[gram[-1]]) > 0:
+            for leaf in tree[gram[-1]]:
+                current_round.append(gram+[leaf])
+    return current_round
+
+
+
+
+def getSyntacticTreeNGram(conllu: pd.DataFrame, id_tree: dict[int, dict[int, list[int]]], n: int):
+    """
+    Function for getting the dependency relation n-grams from a conllu-file
+    Expects you to have built the id-tree beforehand using buildIdTreeFromConllu()
+    Returns the n-grams as a dictionary of tuple-count pairs
+    """
+    deprels = conllu["deprel"]
+    all_id_grams = []
+    for root in id_tree:
+        tree = id_tree[root]
+        init_grams = [[x] for x in list(tree.keys())]
+        for i in range(1, n):
+            init_grams = getIdTreeNGram(tree, init_grams)
+        all_id_grams += init_grams
+    all_deprel_grams = map(tuple, [[deprels[y] for y in x] for x in all_id_grams])
+    return Counter(all_deprel_grams)
 
 
 
@@ -1040,13 +1070,13 @@ def getPreposingAdverbialClauses(corpus: dict[str,pd.DataFrame]) -> dict:
     returnable = {}
     for key in corpus:
         df = corpus[key]
-        df['head'] = df['head'].apply(lambda x: int(x))
-        df['id'] = df['id'].apply(lambda x: int(x))
+        #df['head'] = df['head'].apply(lambda x: int(x))
+        #df['id'] = df['id'].apply(lambda x: int(x))
         prep_advcl = 0
         advcl_id = 1000
         root_id = 1000
         for i in range(len(df)):
-            if df.loc[i]['id'] == 1:
+            if df.loc[i]['id'] == '1':
                 advcl_id = 1000
                 root_id = 1000
             if df.loc[i]['deprel'] == 'root':

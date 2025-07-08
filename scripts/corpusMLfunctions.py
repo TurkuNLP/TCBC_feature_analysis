@@ -66,7 +66,65 @@ FEATS = CASES + VERBFORMS + VERBTENSES + VERBVOICES + VERBMOODS + PERSONS + NUMB
 #POS tags in Finnish UD
 POS = ['NOUN', 'VERB', 'PRON', 'ADV', 'AUX', 'ADJ', 'PROPN', 'CCONJ', 'SCONJ', 'ADP', 'NUM', 'INTJ', 'PUNCT']
 
+#Bigrams and trigrams
+POS_BIGRAMS = []
+POS_TRIGRAMS = []
+for x in POS:
+    for y in POS:
+            for z in POS:
+                  POS_TRIGRAMS.append((x,y,z))
+            POS_BIGRAMS.append((x,y))
 
+DEPREL_BIGRAMS = []
+for x in DEPRELS:
+    for y in DEPRELS:
+            DEPREL_BIGRAMS.append((x,y))
+
+#NOT IN TCBC 1.0
+#Uneccessary features and bi/trigrams, which don't occur even once in any of the books
+#We remove them to save time when creating feature vectors
+#THIS SHOULD BE UPDATED WITH NEW VERSIONS OF THE CORPUS
+
+FEATS_TO_DEL = ['Derivation=Inen|VsDerivation=Ja|Tar', 'Derivation=Lainen|Vs', 'Derivation=Llinen|Vs', 'Derivation=Ton|Vs', 'Cilitic=Han', 'Cilitic=Ka', 'Cilitic=Kaan', 'Cilitic=Kin', 'Cilitic=Ko', 'Cilitic=Pa', 'Cilitic=S', 'Cilitic=Han|Kin', 'Cilitic=Han|Ko', 'Cilitic=Han|Pa', 'Cilitic=Ko|S', 'Cilitic=Pa|S']
+POS_TRIGRAMS_TO_DEL = [('NOUN', 'INTJ', 'ADP'), ('VERB', 'ADP', 'SCONJ'), ('VERB', 'ADP', 'INTJ'), ('VERB', 'NUM', 'INTJ'), ('VERB', 'INTJ', 'ADP'), ('PRON', 'INTJ', 'CCONJ'), ('PRON', 'INTJ', 'NUM'), ('ADV', 'NUM', 'INTJ'), ('ADV', 'INTJ', 'ADP'), ('AUX', 'CCONJ', 'ADP'), ('AUX', 'SCONJ', 'CCONJ'), ('AUX', 'SCONJ', 'ADP'), ('AUX', 'SCONJ', 'INTJ'), ('AUX', 'ADP', 'INTJ'), ('AUX', 'INTJ', 'CCONJ'), ('AUX', 'INTJ', 'ADP'), ('ADJ', 'PRON', 'INTJ'), ('ADJ', 'SCONJ', 'CCONJ'), ('ADJ', 'ADP', 'INTJ'), ('ADJ', 'NUM', 'INTJ'), ('ADJ', 'INTJ', 'PRON'), ('ADJ', 'INTJ', 'AUX'), ('ADJ', 'INTJ', 'ADP'), ('ADJ', 'INTJ', 'NUM'), ('PROPN', 'ADJ', 'INTJ'), ('PROPN', 'SCONJ', 'CCONJ'), ('PROPN', 'SCONJ', 'ADP'), ('PROPN', 'SCONJ', 'INTJ'), ('PROPN', 'ADP', 'INTJ'), ('PROPN', 'INTJ', 'CCONJ'), ('PROPN', 'INTJ', 'SCONJ'), ('PROPN', 'INTJ', 'ADP'), ('PROPN', 'INTJ', 'NUM'), ('CCONJ', 'CCONJ', 'ADP'), ('CCONJ', 'CCONJ', 'NUM'), ('CCONJ', 'ADP', 'SCONJ'), ('CCONJ', 'ADP', 'INTJ'), ('CCONJ', 'NUM', 'SCONJ'), ('CCONJ', 'NUM', 'INTJ'), ('CCONJ', 'INTJ', 'ADP'), ('SCONJ', 'PROPN', 'INTJ'), ('SCONJ', 'CCONJ', 'AUX'), ('SCONJ', 'CCONJ', 'ADP'), ('SCONJ', 'CCONJ', 'NUM'), ('SCONJ', 'CCONJ', 'INTJ'), ('SCONJ', 'CCONJ', 'PUNCT'), ('SCONJ', 'SCONJ', 'ADP'), ('SCONJ', 'SCONJ', 'INTJ'), ('SCONJ', 'ADP', 'AUX'), ('SCONJ', 'ADP', 'CCONJ'), ('SCONJ', 'ADP', 'SCONJ'), ('SCONJ', 'ADP', 'ADP'), ('SCONJ', 'ADP', 'INTJ'), ('SCONJ', 'ADP', 'PUNCT'), ('SCONJ', 'NUM', 'SCONJ'), ('SCONJ', 'NUM', 'INTJ'), ('SCONJ', 'INTJ', 'ADJ'), ('SCONJ', 'INTJ', 'CCONJ'), ('SCONJ', 'INTJ', 'ADP'), ('SCONJ', 'INTJ', 'NUM'), ('ADP', 'VERB', 'INTJ'), ('ADP', 'ADV', 'INTJ'), ('ADP', 'ADJ', 'INTJ'), ('ADP', 'PROPN', 'INTJ'), ('ADP', 'SCONJ', 'CCONJ'), ('ADP', 'ADP', 'SCONJ'), ('ADP', 'ADP', 'INTJ'), ('ADP', 'NUM', 'SCONJ'), ('ADP', 'NUM', 'INTJ'), ('ADP', 'INTJ', 'PRON'), ('ADP', 'INTJ', 'ADV'), ('ADP', 'INTJ', 'AUX'), ('ADP', 'INTJ', 'ADJ'), ('ADP', 'INTJ', 'CCONJ'), ('ADP', 'INTJ', 'SCONJ'), ('ADP', 'INTJ', 'ADP'), ('ADP', 'INTJ', 'NUM'), ('NUM', 'PRON', 'INTJ'), ('NUM', 'ADV', 'INTJ'), ('NUM', 'AUX', 'CCONJ'), ('NUM', 'AUX', 'INTJ'), ('NUM', 'ADJ', 'INTJ'), ('NUM', 'CCONJ', 'ADP'), ('NUM', 'SCONJ', 'ADV'), ('NUM', 'SCONJ', 'CCONJ'), ('NUM', 'SCONJ', 'SCONJ'), ('NUM', 'SCONJ', 'ADP'), ('NUM', 'SCONJ', 'INTJ'), ('NUM', 'SCONJ', 'PUNCT'), ('NUM', 'ADP', 'ADP'), ('NUM', 'ADP', 'INTJ'), ('NUM', 'INTJ', 'VERB'), ('NUM', 'INTJ', 'AUX'), ('NUM', 'INTJ', 'ADP'), ('NUM', 'INTJ', 'INTJ'), ('INTJ', 'VERB', 'ADP'), ('INTJ', 'ADV', 'ADP'), ('INTJ', 'AUX', 'CCONJ'), ('INTJ', 'AUX', 'SCONJ'), ('INTJ', 'AUX', 'ADP'), ('INTJ', 'AUX', 'NUM'), ('INTJ', 'ADJ', 'ADP'), ('INTJ', 'ADJ', 'NUM'), ('INTJ', 'PROPN', 'SCONJ'), ('INTJ', 'CCONJ', 'CCONJ'), ('INTJ', 'CCONJ', 'ADP'), ('INTJ', 'CCONJ', 'NUM'), ('INTJ', 'SCONJ', 'CCONJ'), ('INTJ', 'SCONJ', 'ADP'), ('INTJ', 'SCONJ', 'NUM'), ('INTJ', 'SCONJ', 'INTJ'), ('INTJ', 'ADP', 'VERB'), ('INTJ', 'ADP', 'AUX'), ('INTJ', 'ADP', 'ADJ'), ('INTJ', 'ADP', 'CCONJ'), ('INTJ', 'ADP', 'SCONJ'), ('INTJ', 'ADP', 'ADP'), ('INTJ', 'ADP', 'NUM'), ('INTJ', 'ADP', 'INTJ'), ('INTJ', 'NUM', 'PRON'), ('INTJ', 'NUM', 'AUX'), ('INTJ', 'NUM', 'PROPN'), ('INTJ', 'NUM', 'CCONJ'), ('INTJ', 'NUM', 'SCONJ'), ('INTJ', 'NUM', 'ADP'), ('INTJ', 'NUM', 'NUM'), ('INTJ', 'NUM', 'INTJ'), ('INTJ', 'INTJ', 'ADP'), ('PUNCT', 'ADP', 'SCONJ'), ('PUNCT', 'ADP', 'INTJ')]
+DEPREL_BIGRAMS_TO_DEL = [('nsubj', 'root'), ('advmod', 'root'), ('obl', 'root'), ('obj', 'root'), ('conj', 'root'), ('conj', 'flat'), ('aux', 'root'), ('aux', 'compound:nn'), ('aux', 'compound'), ('aux', 'flat'), ('aux', 'goeswith'), ('cc', 'root'), ('cc', 'vocative'), ('cc', 'flat:foreign'), ('cc', 'csubj'), ('amod', 'csubj'), ('amod', 'goeswith'), ('nmod:poss', 'root'), ('nmod:poss', 'csubj'), ('mark', 'root'), ('mark', 'vocative'), ('mark', 'cc:preconj'), ('mark', 'flat'), ('mark', 'goeswith'), ('cop', 'root'), ('cop', 'goeswith'), ('nsubj:cop', 'root'), ('nsubj:cop', 'csubj'), ('nsubj:cop', 'goeswith'), ('advcl', 'root'), ('advcl', 'flat'), ('xcomp', 'root'), ('case', 'root'), ('case', 'discourse'), ('case', 'vocative'), ('case', 'flat:foreign'), ('case', 'csubj'), ('case', 'flat'), ('case', 'goeswith'), ('det', 'root'), ('det', 'goeswith'), ('ccomp', 'root'), ('ccomp', 'goeswith'), ('nmod', 'csubj'), ('parataxis', 'root'), ('parataxis', 'flat'), ('parataxis', 'goeswith'), ('acl:relcl', 'root'), ('acl:relcl', 'flat:foreign'), ('acl:relcl', 'flat'), ('acl:relcl', 'goeswith'), ('acl', 'root'), ('acl', 'fixed'), ('acl', 'vocative'), ('acl', 'csubj:cop'), ('acl', 'flat:foreign'), ('acl', 'csubj'), ('acl', 'compound'), ('acl', 'flat'), ('acl', 'goeswith'), ('xcomp:ds', 'root'), ('xcomp:ds', 'compound'), ('xcomp:ds', 'flat'), ('xcomp:ds', 'goeswith'), ('discourse', 'root'), ('discourse', 'acl'), ('discourse', 'aux:pass'), ('discourse', 'nmod:gobj'), ('discourse', 'nmod:gsubj'), ('discourse', 'compound:prt'), ('discourse', 'csubj:cop'), ('discourse', 'csubj'), ('discourse', 'flat'), ('discourse', 'goeswith'), ('nummod', 'root'), ('nummod', 'vocative'), ('nummod', 'csubj:cop'), ('nummod', 'goeswith'), ('fixed', 'root'), ('fixed', 'acl'), ('fixed', 'cop:own'), ('fixed', 'nmod:gobj'), ('fixed', 'nmod:gsubj'), ('fixed', 'csubj:cop'), ('fixed', 'orphan'), ('fixed', 'cc:preconj'), ('fixed', 'csubj'), ('fixed', 'compound'), ('fixed', 'flat'), ('fixed', 'goeswith'), ('cop:own', 'root'), ('cop:own', 'nmod:poss'), ('cop:own', 'nummod'), ('cop:own', 'flat:name'), ('cop:own', 'compound:nn'), ('cop:own', 'aux:pass'), ('cop:own', 'vocative'), ('cop:own', 'nmod:gobj'), ('cop:own', 'nmod:gsubj'), ('cop:own', 'csubj:cop'), ('cop:own', 'flat:foreign'), ('cop:own', 'orphan'), ('cop:own', 'cc:preconj'), ('cop:own', 'csubj'), ('cop:own', 'compound'), ('cop:own', 'flat'), ('cop:own', 'goeswith'), ('appos', 'root'), ('appos', 'csubj'), ('appos', 'goeswith'), ('flat:name', 'root'), ('flat:name', 'xcomp:ds'), ('flat:name', 'fixed'), ('flat:name', 'cop:own'), ('flat:name', 'aux:pass'), ('flat:name', 'vocative'), ('flat:name', 'nmod:gobj'), ('flat:name', 'compound:prt'), ('flat:name', 'csubj:cop'), ('flat:name', 'orphan'), ('flat:name', 'cc:preconj'), ('flat:name', 'csubj'), ('flat:name', 'flat'), ('flat:name', 'goeswith'), ('compound:nn', 'root'), ('compound:nn', 'aux:pass'), ('compound:nn', 'csubj:cop'), ('compound:nn', 'csubj'), ('compound:nn', 'flat'), ('aux:pass', 'root'), ('aux:pass', 'vocative'), ('aux:pass', 'compound:prt'), ('aux:pass', 'csubj:cop'), ('aux:pass', 'flat:foreign'), ('aux:pass', 'orphan'), ('aux:pass', 'cc:preconj'), ('aux:pass', 'csubj'), ('aux:pass', 'flat'), ('aux:pass', 'goeswith'), ('vocative', 'root'), ('vocative', 'nsubj'), ('vocative', 'obl'), ('vocative', 'xcomp'), ('vocative', 'xcomp:ds'), ('vocative', 'cop:own'), ('vocative', 'aux:pass'), ('vocative', 'nmod:gobj'), ('vocative', 'nmod:gsubj'), ('vocative', 'compound:prt'), ('vocative', 'csubj:cop'), ('vocative', 'orphan'), ('vocative', 'cc:preconj'), ('vocative', 'csubj'), ('vocative', 'compound'), ('vocative', 'flat'), ('vocative', 'goeswith'), ('nmod:gobj', 'root'), ('nmod:gobj', 'fixed'), ('nmod:gobj', 'vocative'), ('nmod:gobj', 'csubj:cop'), ('nmod:gobj', 'flat:foreign'), ('nmod:gobj', 'csubj'), ('nmod:gsubj', 'root'), ('nmod:gsubj', 'obj'), ('nmod:gsubj', 'xcomp'), ('nmod:gsubj', 'ccomp'), ('nmod:gsubj', 'parataxis'), ('nmod:gsubj', 'xcomp:ds'), ('nmod:gsubj', 'fixed'), ('nmod:gsubj', 'cop:own'), ('nmod:gsubj', 'aux:pass'), ('nmod:gsubj', 'vocative'), ('nmod:gsubj', 'compound:prt'), ('nmod:gsubj', 'csubj:cop'), ('nmod:gsubj', 'flat:foreign'), ('nmod:gsubj', 'orphan'), ('nmod:gsubj', 'csubj'), ('nmod:gsubj', 'compound'), ('nmod:gsubj', 'flat'), ('nmod:gsubj', 'goeswith'), ('compound:prt', 'root'), ('compound:prt', 'nsubj'), ('compound:prt', 'cc'), ('compound:prt', 'amod'), ('compound:prt', 'cop'), ('compound:prt', 'nsubj:cop'), ('compound:prt', 'xcomp'), ('compound:prt', 'parataxis'), ('compound:prt', 'acl'), ('compound:prt', 'xcomp:ds'), ('compound:prt', 'discourse'), ('compound:prt', 'nummod'), ('compound:prt', 'fixed'), ('compound:prt', 'cop:own'), ('compound:prt', 'appos'), ('compound:prt', 'flat:name'), ('compound:prt', 'compound:nn'), ('compound:prt', 'aux:pass'), ('compound:prt', 'vocative'), ('compound:prt', 'nmod:gobj'), ('compound:prt', 'nmod:gsubj'), ('compound:prt', 'csubj:cop'), ('compound:prt', 'flat:foreign'), ('compound:prt', 'orphan'), ('compound:prt', 'cc:preconj'), ('compound:prt', 'csubj'), ('compound:prt', 'compound'), ('compound:prt', 'flat'), ('compound:prt', 'goeswith'), ('csubj:cop', 'root'), ('csubj:cop', 'fixed'), ('csubj:cop', 'orphan'), ('csubj:cop', 'compound'), ('csubj:cop', 'flat'), ('csubj:cop', 'goeswith'), ('flat:foreign', 'root'), ('flat:foreign', 'aux'), ('flat:foreign', 'advcl'), ('flat:foreign', 'ccomp'), ('flat:foreign', 'parataxis'), ('flat:foreign', 'xcomp:ds'), ('flat:foreign', 'fixed'), ('flat:foreign', 'cop:own'), ('flat:foreign', 'aux:pass'), ('flat:foreign', 'nmod:gobj'), ('flat:foreign', 'nmod:gsubj'), ('flat:foreign', 'compound:prt'), ('flat:foreign', 'csubj:cop'), ('flat:foreign', 'orphan'), ('flat:foreign', 'cc:preconj'), ('flat:foreign', 'csubj'), ('flat:foreign', 'flat'), ('flat:foreign', 'goeswith'), ('orphan', 'root'), ('orphan', 'csubj:cop'), ('orphan', 'csubj'), ('orphan', 'flat'), ('orphan', 'goeswith'), ('cc:preconj', 'root'), ('cc:preconj', 'aux'), ('cc:preconj', 'amod'), ('cc:preconj', 'nmod:poss'), ('cc:preconj', 'xcomp'), ('cc:preconj', 'ccomp'), ('cc:preconj', 'parataxis'), ('cc:preconj', 'acl:relcl'), ('cc:preconj', 'acl'), ('cc:preconj', 'xcomp:ds'), ('cc:preconj', 'discourse'), ('cc:preconj', 'nummod'), ('cc:preconj', 'cop:own'), ('cc:preconj', 'appos'), ('cc:preconj', 'flat:name'), ('cc:preconj', 'compound:nn'), ('cc:preconj', 'aux:pass'), ('cc:preconj', 'vocative'), ('cc:preconj', 'nmod:gobj'), ('cc:preconj', 'nmod:gsubj'), ('cc:preconj', 'compound:prt'), ('cc:preconj', 'csubj:cop'), ('cc:preconj', 'flat:foreign'), ('cc:preconj', 'orphan'), ('cc:preconj', 'csubj'), ('cc:preconj', 'compound'), ('cc:preconj', 'flat'), ('cc:preconj', 'goeswith'), ('csubj', 'root'), ('csubj', 'fixed'), ('csubj', 'flat:foreign'), ('csubj', 'orphan'), ('csubj', 'cc:preconj'), ('csubj', 'compound'), ('csubj', 'flat'), ('csubj', 'goeswith'), ('compound', 'root'), ('compound', 'nsubj'), ('compound', 'aux'), ('compound', 'nmod:poss'), ('compound', 'mark'), ('compound', 'advcl'), ('compound', 'xcomp'), ('compound', 'ccomp'), ('compound', 'acl:relcl'), ('compound', 'acl'), ('compound', 'xcomp:ds'), ('compound', 'cop:own'), ('compound', 'compound:nn'), ('compound', 'aux:pass'), ('compound', 'vocative'), ('compound', 'nmod:gobj'), ('compound', 'nmod:gsubj'), ('compound', 'compound:prt'), ('compound', 'csubj:cop'), ('compound', 'flat:foreign'), ('compound', 'cc:preconj'), ('compound', 'csubj'), ('compound', 'goeswith'), ('flat', 'root'), ('flat', 'nsubj'), ('flat', 'advmod'), ('flat', 'obl'), ('flat', 'obj'), ('flat', 'aux'), ('flat', 'nmod:poss'), ('flat', 'cop'), ('flat', 'nsubj:cop'), ('flat', 'advcl'), ('flat', 'xcomp'), ('flat', 'det'), ('flat', 'ccomp'), ('flat', 'nmod'), ('flat', 'parataxis'), ('flat', 'acl:relcl'), ('flat', 'acl'), ('flat', 'xcomp:ds'), ('flat', 'discourse'), ('flat', 'fixed'), ('flat', 'cop:own'), ('flat', 'appos'), ('flat', 'flat:name'), ('flat', 'compound:nn'), ('flat', 'aux:pass'), ('flat', 'vocative'), ('flat', 'nmod:gobj'), ('flat', 'nmod:gsubj'), ('flat', 'compound:prt'), ('flat', 'csubj:cop'), ('flat', 'flat:foreign'), ('flat', 'orphan'), ('flat', 'cc:preconj'), ('flat', 'csubj'), ('flat', 'goeswith'), ('goeswith', 'root'), ('goeswith', 'nsubj'), ('goeswith', 'obl'), ('goeswith', 'obj'), ('goeswith', 'conj'), ('goeswith', 'aux'), ('goeswith', 'cc'), ('goeswith', 'nmod:poss'), ('goeswith', 'mark'), ('goeswith', 'cop'), ('goeswith', 'nsubj:cop'), ('goeswith', 'advcl'), ('goeswith', 'xcomp'), ('goeswith', 'det'), ('goeswith', 'ccomp'), ('goeswith', 'parataxis'), ('goeswith', 'acl:relcl'), ('goeswith', 'acl'), ('goeswith', 'xcomp:ds'), ('goeswith', 'discourse'), ('goeswith', 'nummod'), ('goeswith', 'fixed'), ('goeswith', 'cop:own'), ('goeswith', 'appos'), ('goeswith', 'flat:name'), ('goeswith', 'compound:nn'), ('goeswith', 'aux:pass'), ('goeswith', 'vocative'), ('goeswith', 'nmod:gobj'), ('goeswith', 'nmod:gsubj'), ('goeswith', 'compound:prt'), ('goeswith', 'csubj:cop'), ('goeswith', 'flat:foreign'), ('goeswith', 'orphan'), ('goeswith', 'cc:preconj'), ('goeswith', 'csubj'), ('goeswith', 'compound'), ('goeswith', 'flat'), ('goeswith', 'goeswith')]
+
+FEATS = [x for x in FEATS if x not in FEATS_TO_DEL]
+POS_TRIGRAMS = [x for x in POS_TRIGRAMS if x not in POS_TRIGRAMS_TO_DEL]
+DEPREL_BIGRAMS = [x for x in DEPREL_BIGRAMS if x not in DEPREL_BIGRAMS_TO_DEL]
+
+#These lists can be generated by generating feature vectors for all books in TCBC and running the following code on the feature vectors:
+"""
+def zeroedFeatures(arr):
+    zeroed_indices = []
+    res = np.count_nonzero(arr, axis=0)
+    for i in index_dict:
+        if res[i] == 0:
+            zeroed_indices.append(i)
+    return zeroed_indices
+
+to_del = zeroedFeatures(np.array([x[1] for x in results]))
+
+def ngramToTuple(ngram_str):
+    return tuple(ngram_str.split('_'))
+
+to_del_feats = []
+to_del_pos_bigram = []
+to_del_pos_trigram = []
+to_del_deprel_bigram = []
+for i in to_del:
+    if index_dict[i] in FEATS:
+        to_del_feats.append(index_dict[i])
+    test = ngramToTuple(index_dict[i])
+    if test in POS_BIGRAMS:
+        to_del_pos_bigram.append(test)
+    if test in POS_TRIGRAMS:
+        to_del_pos_trigram.append(test)
+    if test in DEPREL_BIGRAMS:
+        to_del_deprel_bigram.append(test)
+"""
+
+#Combine UD features together
 CONLLU_FEATS = DEPRELS + FEATS + POS 
 
 def splitKeysTrainTestEval(corpus_with_ages: dict[str, pd.DataFrame]):
@@ -425,46 +483,122 @@ def getFleschKincaidGradeLevel(corpus: dict):
 
 #Alternative way of using the custom vectorizer to enable min-max normalization of the data
 
-def customConlluVectorizer(conllu_lines):
+#Alternative way of using the custom vectorizer to enable min-max normalization of the data
+
+def customConlluVectorizer(df: pd.DataFrame, generate_key_dictionary:bool=False):
     """
-    Custom vecotrizer used to create feature vectors from hand-picked features
+    Custom vecotrizer used to create feature vectors from hand-picked features.
+    If passed a flag, will generate a dictionary that maps feature vector indices to the names of the features.
+    Recommend only generating to key dictionary once to save some time, allthough it is not computationally super expensive.
     """
     feature_vector = []
-    
-    df = snippetConllu2DF(conllu_lines)
-
+    if generate_key_dictionary:
+        feature_indices = {}
+        index = 0
     temp_corp = {'1':df}
-    #Deprel per main clause for each deprel
-    for deprel in DEPRELS:
-        feature_vector.append(bdf.getDeprelFeaturePerBook(temp_corp, deprel, True)['1'])
-    #Feat per main clause for each feature
-    for feat in FEATS:
-        feature_vector.append(bdf.getFeatsFeaturePerBook(temp_corp, feat, True)['1'])
-    #POS per main clause for each pos-tag
-    for pos in POS:
-        feature_vector.append(bdf.getPosFeaturePerBook(temp_corp, pos, True)['1'])
-
-    #Other features
+    syntactic_tree = bdf.buildIdTreeFromConllu(df)
     word_freqs = bdf.getWordFrequencies(temp_corp)
     word_amounts = bdf.getTokenAmounts(temp_corp)
     sent_amounts = bdf.getNumOfSentences(temp_corp)
+
+    #Deprel per main clause for each deprel
+    for deprel in DEPRELS:
+        feature_vector.append(bdf.getDeprelFeaturePerBook(temp_corp, deprel, True)['1'])
+        if generate_key_dictionary:
+            feature_indices[index] = deprel
+            index += 1
+    #Feat per main clause for each feature
+    for feat in FEATS:
+        feature_vector.append(bdf.getFeatsFeaturePerBook(temp_corp, feat, True)['1'])
+        if generate_key_dictionary:
+            feature_indices[index] = feat
+            index += 1
+    #POS related (simple) features
+    for pos in POS:
+        #POS per main clause for each pos-tag
+        feature_vector.append(bdf.getPosFeaturePerBook(temp_corp, pos, True)['1'])
+        if generate_key_dictionary:
+            feature_indices[index] = pos
+            index += 1
+        #POS pharses per main clause
+        feature_vector.append(bdf.scaleCorpusData(bdf.getPosPhraseCounts(temp_corp, pos), sent_amounts)['1'])
+        if generate_key_dictionary:
+            feature_indices[index] = pos+"_Phrase"
+            index += 1
+        #POS ratios
+        pos2 = POS.copy()
+        pos2.remove(pos)
+        for pos_2 in pos2:
+            #Check that we don't divide by 0 by accident!
+            divider = bdf.getPosFeaturePerBook(temp_corp, pos_2)['1']
+            if divider == 0:
+                feature_vector.append(0)
+            else:
+                feature_vector.append(bdf.getPosFeaturePerBook(temp_corp, pos)['1'] / divider)
+            if generate_key_dictionary:
+                feature_indices[index] = pos+"_To_"+pos_2+"_Ratio"
+                index += 1
+    #POS bigrams per main clause
+    pos_bigrams = bdf.getPosNGramForCorpus(temp_corp, 2)['1']
+    for pb in POS_BIGRAMS:
+         feature_vector.append(pos_bigrams.get(pb, 0) / sent_amounts['1'])
+         if generate_key_dictionary:
+              feature_indices[index] = pb[0]+'_'+pb[1]
+              index += 1
+    #POS trigrams per main clause
+    pos_trigrams = bdf.getPosNGramForCorpus(temp_corp, 3)['1']
+    for pt in POS_TRIGRAMS:
+         feature_vector.append(pos_trigrams.get(pt, 0) / sent_amounts['1'])
+         if generate_key_dictionary:
+              feature_indices[index] = pt[0]+'_'+pt[1]+'_'+pt[2]
+              index += 1
+
+        
+
+    #Other features
     #TTR
     feature_vector.append(bdf.getTypeTokenRatios(word_freqs, word_amounts)['1'])
+    if generate_key_dictionary:
+            feature_indices[index] = "TTR"
+            index += 1
     #MLS
     feature_vector.append(bdf.getAvgSentenceLens(temp_corp)['1'])
+    if generate_key_dictionary:
+            feature_indices[index] = "MLS"
+            index += 1
     #CONJ2Sent
     feature_vector.append(bdf.getConjPerSentence(temp_corp)['1'])
-    #Noun phrases per main clause
-    feature_vector.append(bdf.scaleCorpusData(bdf.getPosPhraseCounts(temp_corp, 'NOUN'), sent_amounts)['1'])
-    #Verb phrases per main clause
-    feature_vector.append(bdf.scaleCorpusData(bdf.getPosPhraseCounts(temp_corp, 'VERB'), sent_amounts)['1'])
-    #Adj phrases per main clause
-    feature_vector.append(bdf.scaleCorpusData(bdf.getPosPhraseCounts(temp_corp, 'ADJ'), sent_amounts)['1'])
-    #Adv phrases per main clause
-    feature_vector.append(bdf.scaleCorpusData(bdf.getPosPhraseCounts(temp_corp, 'ADV'), sent_amounts)['1'])
+    if generate_key_dictionary:
+            feature_indices[index] = "ConjPerSent"
+            index += 1
     #Flesch-Kincaid grade level
-    feature_vector.append(getFleschKincaidGradeLevel(temp_corp)['1'])
+    feature_vector.append(bdf.getFleschKincaidGradeLevel(temp_corp)['1'])
+    if generate_key_dictionary:
+            feature_indices[index] = "F-K-GradeLevel"
+            index += 1
+    #Preposing adverbial clauses
+    feature_vector.append(bdf.getPreposingAdverbialClauses(temp_corp)['1'])
+    if generate_key_dictionary:
+            feature_indices[index] = "PrepAdvcl"
+            index += 1
+    #Features that require parsing the syntactic tree structure
+    #Average depth of syntactic tree
+    feature_vector.append(bdf.getMeanSyntacticTreeDepth(syntactic_tree))
+    if generate_key_dictionary:
+            feature_indices[index] = "MeanTreeDepth"
+            index += 1
+    #deprel bigrams per main clause
+    deprel_bigrams = bdf.getSyntacticTreeNGram(df, syntactic_tree, 2)
+    for db in DEPREL_BIGRAMS:
+         feature_vector.append(deprel_bigrams.get(db, 0) / sent_amounts['1'])
+         if generate_key_dictionary:
+              feature_indices[index] = db[0]+'_'+db[1]
+              index += 1
+    
 
+
+    if generate_key_dictionary:
+         return feature_vector, feature_indices
     return feature_vector
 
 def minMaxNormalization(min_vector: list, max_vector:list, feature_vector:list):
