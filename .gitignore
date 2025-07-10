@@ -5,3 +5,4 @@ SnippetDatasets/
 TestResults/
 Keylists.jsonl
 *.sh
+*_ignorable_*
