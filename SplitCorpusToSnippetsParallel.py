@@ -20,7 +20,6 @@ def performSnipping():
 
     #Load corpus
     corpus = bdf.mapGroup2Age(bdf.maskPropn(bdf.initBooksFromConllus(CONLLUS_FOLDER)), AGE_SHEET)
-
     pool = mp.Pool(mp.cpu_count())
     pbar = tqdm(total=len(corpus))
     def update(*a):
@@ -29,6 +28,7 @@ def performSnipping():
     for key in corpus:
         df = corpus[key]
         pool.apply_async(cmf.splitBooksToSnippets, [key, df, SNIPPET_LENS, "SnippetDatasets/"], callback=update)
+        
     #print("All running!")
     pool.close()
     #print("Pool closed!")

@@ -6,3 +6,5 @@ TestResults/
 Keylists.jsonl
 *.sh
 *_ignorable_*
+*.pyc
+test_1_2

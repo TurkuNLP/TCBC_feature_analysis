@@ -1240,6 +1240,9 @@ def getRatioOfFunctionWords(conllu: pd.DataFrame):
     Essentially means dividing the number of function words (all other POS tags) by the number of content words (NOUN, PROPN, ADJ, NUM, and VERB)
     """
     num_of_content_words = len(conllu[(conllu['upos'] == 'NOUN') | (conllu['upos'] == 'PROPN') | (conllu['upos'] == 'ADJ') | (conllu['upos'] == 'NUM') | (conllu['upos'] == 'VERB')])
+    #Don't divide by 0...
+    if num_of_content_words == 0:
+        return 1.0
     return (len(conllu)-num_of_content_words)/num_of_content_words
 
 def getPreposingAdverbialClauses(corpus: dict[str,pd.DataFrame]) -> dict:

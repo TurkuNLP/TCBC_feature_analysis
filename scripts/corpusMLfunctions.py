@@ -461,16 +461,22 @@ def map2Group(i: int):
     return "13+"
 
 def replaceWithMin(list1, list2):
-    for i in range(len(list1)):
-        if list1[i] > list2[i]:
-            list1[i] = list2[i]
-    return list1
-
-def replaceWithMax(list1, list2):
+    new_list = []
     for i in range(len(list1)):
         if list1[i] < list2[i]:
-            list1[i] = list2[i]
-    return list1
+            new_list.append(list1[i])
+        else:
+            new_list.append(list2[i])
+    return new_list
+
+def replaceWithMax(list1, list2):
+    new_list = []
+    for i in range(len(list1)):
+        if list1[i] > list2[i]:
+            new_list.append(list1[i])
+        else:
+            new_list.append(list2[i])
+    return new_list
 
 def snippetConllu2DF(conllu_lines: str):
     df = pd.DataFrame([line.split('\t') for line in conllu_lines.split('\n')])
@@ -693,7 +699,11 @@ def minMaxNormalization(min_vector: list, max_vector:list, feature_vector:list):
     """
     to_return = []
     for i in range(len(feature_vector)):
-        to_return.append((feature_vector[i]-min_vector[i])/(max_vector[i]-min_vector[i]))
+        min_max_neg = (max_vector[i]-min_vector[i])
+        if min_max_neg == 0:
+            to_return.append(0)
+        else:
+            to_return.append((feature_vector[i]-min_vector[i])/(max_vector[i]-min_vector[i]))
     return to_return
 
 def splitBooksToSnippets(key: str, df: pd.DataFrame, snip_lens: list[int], folder:str=None):
@@ -705,70 +715,84 @@ def splitBooksToSnippets(key: str, df: pd.DataFrame, snip_lens: list[int], folde
     Outputs folders for each book in the corpus and creates a (HF) Dataset for each snippet length.
     To combine these individual snippet datasets into a more usable form, please use combineSnippetBooksToDS()
     """
-    mins = {x:[] for x in snip_lens}
-    maxs = {x:[] for x in snip_lens}
-    pre_norming = {}
-    base = snip_lens[0]
-    dict_lists = {x:[] for x in snip_lens}
-    sent_counter = 0
-    raw_text = ""
-    conllu_format = ""
-    sent_counters = {x:0 for x in snip_lens}
-    raw_texts = {x:"" for x in snip_lens}
-    conllu_formats = {x:"" for x in snip_lens}
-    label = int(bdf.findAgeFromID(key))
-    group = map2Group(label)
-
-    #Build syntactic tree for more reliable sentence splitting
-    id_tree = bdf.buildIdTreeFromConllu(df)
-    sentence_heads = list(id_tree.keys())
-    for sent in sentence_heads:
-            for j in id_tree[sent]:
-                raw_text += str(df['text'].iloc[j])+" "
-                conllu_format += "\t".join(df.iloc[j].to_numpy("str"))+"\n"
-                sent_counter += 1
-            if sent_counter == base:
-                for x in snip_lens:
-                    raw_texts[x] = raw_texts[x]+raw_text
-                    conllu_formats[x] = conllu_formats[x]+conllu_format
-                    sent_counters[x] = sent_counters[x]+base
-                    if x == sent_counters[x]:
-                        dict_lists[x].append({"book_id":key, "age":label, "label":group, "raw_text":raw_texts[x], "conllu":conllu_formats[x]})
-                        raw_texts[x] = ""
-                        conllu_formats[x] = ""
-                        sent_counters[x] = 0
-                sent_counter = 0
-                raw_text = ""
-                conllu_format = ""
-    if sent_counter!=0:
-        for x in snip_lens:
-            raw_texts[x] = raw_texts[x]+raw_text
-            conllu_formats[x] = conllu_formats[x]+conllu_format
-            dict_lists[x].append({"book_id":key, "age":label, "label":group, "raw_text":raw_texts[x], "conllu":conllu_formats[x]})
-    #Add initial feature vectors for hand picked features and keep track of mins and maxs
-    for d in dict_lists:
-        for i in range(len(dict_lists[d])):
-            hp_fv = customConlluVectorizer(snippetConllu2DF(dict_lists[d][i]['conllu']))
-            if len(mins[d]) == 0:
-                mins[d] = hp_fv
-            else:
-                mins[d] = replaceWithMin(mins[d], hp_fv)
-            if len(maxs[d]) == 0:
-                maxs[d] = hp_fv
-            else:
-                maxs[d] = replaceWithMax(maxs[d], hp_fv)
-            dict_lists[d][i]['hp_fv'] = hp_fv
-    pre_norming[key] = dict_lists
-    #Scale hand-picked feature vectors and write snippet datasets
-    dict_lists = pre_norming[key]
+    #Skip if folder already exists (don't do unecessary work twice!)
+    #Remember to archive or empty the chosen folder if changing the custom vectorizer function and wanting to re-do the snippet datasets
     if not os.path.exists(folder+key):
         os.mkdir(folder+key)
     placement_folder = folder+key+"/"
-    for d in dict_lists:
-        for i in range(len(dict_lists[d])):
-            dict_lists[d][i]['hp_fv'] = minMaxNormalization(mins[d], maxs[d], dict_lists[d][i]['hp_fv'])
-        Dataset.from_list(dict_lists[d]).to_json(placement_folder+"sniplen_"+str(d)+".jsonl")
-                
+    #Init log
+    with open(placement_folder+"log.txt", 'w') as log:
+         log.write("Starting log\n")
+    #Start program
+    with open(placement_folder+"log.txt", 'a') as log:
+        mins = {x:[] for x in snip_lens}
+        maxs = {x:[] for x in snip_lens}
+        pre_norming = {}
+        base = snip_lens[0]
+        dict_lists = {x:[] for x in snip_lens}
+        sent_counter = 0
+        raw_text = ""
+        conllu_format = ""
+        sent_counters = {x:0 for x in snip_lens}
+        raw_texts = {x:"" for x in snip_lens}
+        conllu_formats = {x:"" for x in snip_lens}
+        label = int(bdf.findAgeFromID(key))
+        group = map2Group(label)
+        log.write("Initial setups done!\n")
+
+        #Build syntactic tree for more reliable sentence splitting
+        id_tree = bdf.buildIdTreeFromConllu(df)
+        log.write("Syntactic tree built!\n")
+        sentence_heads = list(id_tree.keys())
+        for sent in sentence_heads:
+                for j in id_tree[sent]:
+                    raw_text += str(df['text'].iloc[j])+" "
+                    conllu_format += "\t".join(df.iloc[j].to_numpy("str"))+"\n"
+                sent_counter += 1
+                if sent_counter == base:
+                    for x in snip_lens:
+                        raw_texts[x] = raw_texts[x]+raw_text
+                        conllu_formats[x] = conllu_formats[x]+conllu_format
+                        sent_counters[x] = sent_counters[x]+base
+                        if x == sent_counters[x]:
+                            dict_lists[x].append({"book_id":key, "age":label, "label":group, "raw_text":raw_texts[x], "conllu":conllu_formats[x]})
+                            raw_texts[x] = ""
+                            conllu_formats[x] = ""
+                            sent_counters[x] = 0
+                    sent_counter = 0
+                    raw_text = ""
+                    conllu_format = ""
+        if sent_counter!=0:
+            for x in snip_lens:
+                raw_texts[x] = raw_texts[x]+raw_text
+                conllu_formats[x] = conllu_formats[x]+conllu_format
+                dict_lists[x].append({"book_id":key, "age":label, "label":group, "raw_text":raw_texts[x], "conllu":conllu_formats[x]})
+        log.write("Dataset creations done properly!\n")
+        #Add initial feature vectors for hand picked features and keep track of mins and maxs
+        for d in dict_lists:
+            for i in range(len(dict_lists[d])):
+                hp_fv = customConlluVectorizer(snippetConllu2DF(dict_lists[d][i]['conllu']))
+                if len(mins[d]) == 0:
+                    mins[d] = hp_fv
+                else:
+                    mins[d] = replaceWithMin(mins[d], hp_fv)
+                if len(maxs[d]) == 0:
+                    maxs[d] = hp_fv
+                else:
+                    maxs[d] = replaceWithMax(maxs[d], hp_fv)
+                dict_lists[d][i]['hp_fv'] = hp_fv
+            log.write("Feature vector initialized for sniplen "+str(d))
+        pre_norming[key] = dict_lists
+        log.write("Feature vectors initialized correctly!\n")
+        #Scale hand-picked feature vectors and write snippet datasets
+        dict_lists = pre_norming[key]
+        for d in dict_lists:
+            for i in range(len(dict_lists[d])):
+                dict_lists[d][i]['hp_fv'] = minMaxNormalization(mins[d], maxs[d], dict_lists[d][i]['hp_fv'])
+                log.write("Min-max normalization for sniplen "+str(d)+" done successfully")
+            Dataset.from_list(dict_lists[d]).to_json(placement_folder+"sniplen_"+str(d)+".jsonl")
+
+                 
 def combineSnippedBooksToDS(keys: list[str], snip_len: str, folder:str=None):
     logging.set_verbosity(40)
     dss = [Dataset.from_json(folder+key+"/sniplen_"+snip_len+".jsonl") for key in keys]
