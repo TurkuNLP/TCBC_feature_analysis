@@ -8,3 +8,4 @@ Keylists.jsonl
 *_ignorable_*
 *.pyc
 test_1_2
+cache_dir

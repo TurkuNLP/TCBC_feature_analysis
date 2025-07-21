@@ -7,6 +7,7 @@ import random
 import math
 from tqdm import tqdm
 import os
+import json
 
 #Constants
 #In the deprel column
@@ -791,9 +792,16 @@ def splitBooksToSnippets(key: str, df: pd.DataFrame, snip_lens: list[int], folde
                 dict_lists[d][i]['hp_fv'] = minMaxNormalization(mins[d], maxs[d], dict_lists[d][i]['hp_fv'])
                 log.write("Min-max normalization for sniplen "+str(d)+" done successfully")
             Dataset.from_list(dict_lists[d]).to_json(placement_folder+"sniplen_"+str(d)+".jsonl")
-
                  
-def combineSnippedBooksToDS(keys: list[str], snip_len: str, folder:str=None):
-    logging.set_verbosity(40)
-    dss = [Dataset.from_json(folder+key+"/sniplen_"+snip_len+".jsonl") for key in keys]
-    return concatenate_datasets(dss).shuffle()
+def combineSnippedBooksToDS(keys: list[str], snip_len: str, cache_file: str, folder:str=None):
+    #logging.set_verbosity(40)
+    #Helper function to parse json-lines
+    def jsonlReader(key: str):
+        with open(folder+key+"/sniplen_"+snip_len+".jsonl") as reader:
+            with open(cache_file, 'a') as tt:
+                 tt.write(reader.read())
+    #Generate list of dicts, where each dict is a json-line
+    for k in range(len(keys)):
+        jsonlReader(keys[k])
+    #Return a shuffled dataset
+    return Dataset.from_json(cache_file).shuffle()
