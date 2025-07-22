@@ -1,6 +1,6 @@
 #Imports
 from scripts import corpusMLfunctions as cmf
-from datasets import logging
+from datasets import logging, disable_caching
 from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
@@ -30,23 +30,22 @@ def whitespace_tokenizer(ex):
 
 #Version for only using TfIdfVectorizer with raw text as input
 def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool=True):
-    filename = "TestResults/FullResultOnlyText/ParamOptim_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
+    disable_caching()
+    filename = "TestResults/ParamOptim_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
     cache_file = cache_dir+str(i)+"_"+str(SNIPPET_LENS[k])+".jsonl"
     if overwrite or not os.path.exists(filename):
-        hf_cache_dir = cache_dir+"_"+str(SNIPPET_LENS[k])+"_ds"
         train_keys = keylists[i]['train_keys']
         #Temporary edit to test with combining eval+test as we are not param optimizing
         eval_keys = keylists[i]['eval_keys']+keylists[i]['train_keys']
-        train_dss = cmf.combineSnippedBooksToDS(train_keys, SNIPPET_LENS[k], hf_cache_dir, cache_file, inc_raw_text=True, folder=BASE_BEG)
-        eval_dss = cmf.combineSnippedBooksToDS(eval_keys, SNIPPET_LENS[k], hf_cache_dir,  cache_file, inc_raw_text=True, folder=BASE_BEG)
+        train_dss = cmf.combineSnippedBooksToDS(train_keys, SNIPPET_LENS[k], cache_file, inc_hpfv=True, folder=BASE_BEG)
+        eval_dss = cmf.combineSnippedBooksToDS(eval_keys, SNIPPET_LENS[k], cache_file, inc_hpfv=True, folder=BASE_BEG)
         #Empty cache after we don't need it
         os.remove(cache_file)
         #with open(cache_file, 'w') as writer:
         #    writer.write("")
         #Continue on
-        vectorizer = TfidfVectorizer(norm='l2', tokenizer=whitespace_tokenizer, preprocessor=do_nothing, max_features=2000).fit(train_dss['raw_text'])
-        vecd_train_data = vectorizer.transform(train_dss['raw_text'])
-        vecd_eval_data = vectorizer.transform(eval_dss['raw_text'])
+        vecd_train_data = np.array(train_dss['hp_fv'])
+        vecd_eval_data = np.array(eval_dss['hp_fv'])
         #print("Worker for length ",SNIPPET_LENS[k]," and keylist ",i," activated!")
         returnable = []
         for pair in params:
@@ -60,11 +59,6 @@ def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool
                 clf.fit(vecd_train_data, train_dss['label'])
                 predicted = clf.predict(vecd_eval_data)
                 f1 = f1_score(eval_dss['label'], predicted, average="macro")
-                #Reverse the dictionary
-                index2feature = {}
-                for feature,idx in vectorizer.vocabulary_.items():
-                    assert idx not in index2feature #This really should hold
-                    index2feature[idx]=feature
                 #Now we can query index2feature to get the feature names as we need
                 high_prio = {}
                 # make a list of (weight, index), sort it
@@ -73,22 +67,13 @@ def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool
                     for idx,weight in enumerate(clf.coef_[list(clf.classes_).index(j)]):
                         lst.append((weight,idx))
                     lst.sort() #sort
-
-                    #Print first few and last few
-                    #for weight,idx in lst[:20]: #first 30 (ie lowest weight)
-                    #    print(index2feature[idx])
-                    #print("----------------------------------------------------")
-                    #Take the last 30 (lst[-30:]) but these now come from weakest to strongest
-                    #so reverse the list using [::-1]
                     highest_prio = []
                     for weight,idx in lst[-100:][::-1]:
-                        highest_prio.append(index2feature[idx])
+                        highest_prio.append(idx)
                     high_prio[j] = highest_prio
                 returnable.append({'keylist_id':i, 'sniplen':SNIPPET_LENS[k], 'c':pair['c'], 'tol':pair['tol'], 'f1':f1, 'important_feats_7-8':high_prio['7-8'], 'important_feats_9-12':high_prio['9-12'], 'important_feats_13+':high_prio['13+']})
         with open(filename, 'w') as f:
             f.write('\n'.join(map(json.dumps, returnable)))
-        #Clear hf cache to manage space
-        shutil.rmtree(hf_cache_dir)
 
 def testParamResults(permutations: int, keylists: list):
     pool = mp.Pool(mp.cpu_count())

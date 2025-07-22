@@ -560,6 +560,7 @@ def customConlluVectorizer(df: pd.DataFrame, generate_key_dictionary:bool=False)
             if generate_key_dictionary:
                 feature_indices[index] = pos+"_To_"+pos_2+"_Ratio"
                 index += 1
+    """
     #Flat POS bigrams per main clause
     pos_bigrams = bdf.getPosNGramForCorpus(temp_corp, 2)['1']
     for pb in POS_BIGRAMS:
@@ -588,6 +589,7 @@ def customConlluVectorizer(df: pd.DataFrame, generate_key_dictionary:bool=False)
          if generate_key_dictionary:
               feature_indices[index] = 'tree_'+pt[0]+'_'+pt[1]+'_'+pt[2]
               index += 1
+    """
 
         
 
@@ -793,15 +795,23 @@ def splitBooksToSnippets(key: str, df: pd.DataFrame, snip_lens: list[int], folde
                 log.write("Min-max normalization for sniplen "+str(d)+" done successfully")
             Dataset.from_list(dict_lists[d]).to_json(placement_folder+"sniplen_"+str(d)+".jsonl")
                  
-def combineSnippedBooksToDS(keys: list[str], snip_len: str, cache_file: str, folder:str=None):
+def combineSnippedBooksToDS(keys: list[str], snip_len: str, cache_dir: str, cache_file:str, inc_raw_text: bool=False, inc_conllu: bool=False, inc_hpfv: bool=False, folder:str=None):
     #logging.set_verbosity(40)
     #Helper function to parse json-lines
     def jsonlReader(key: str):
         with open(folder+key+"/sniplen_"+snip_len+".jsonl") as reader:
             with open(cache_file, 'a') as tt:
-                 tt.write(reader.read())
+                 #Only include the information we need for our specific purposes to save up on cache space
+                 for line in reader:
+                        if not inc_raw_text:
+                            line = line[:line.find(",\"raw_text\":")] + line[line.find(",\"conllu\":"):]
+                        if not inc_conllu:
+                            line = line[:line.find(",\"conllu\":")] + line[line.find(",\"hp_fv\":"):]
+                        if not inc_hpfv:
+                            line = line[:line.find(",\"hp_fv\":")] + line[line.find("}\n"):]
+                        tt.write(line)
     #Generate list of dicts, where each dict is a json-line
     for k in range(len(keys)):
         jsonlReader(keys[k])
     #Return a shuffled dataset
-    return Dataset.from_json(cache_file).shuffle()
+    return Dataset.from_json(cache_file, cache_dir=cache_dir).shuffle()
