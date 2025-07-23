@@ -1,6 +1,6 @@
 #Imports
 from scripts import corpusMLfunctions as cmf
-from datasets import logging
+from datasets import logging, disable_progress_bars
 from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
@@ -30,10 +30,11 @@ def whitespace_tokenizer(ex):
 
 #Version for only using TfIdfVectorizer with raw text as input
 def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool=True):
+    disable_progress_bars()
     filename = "TestResults/FullResultOnlyText/ParamOptim_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
     cache_file = cache_dir+str(i)+"_"+str(SNIPPET_LENS[k])+".jsonl"
     if overwrite or not os.path.exists(filename):
-        hf_cache_dir = cache_dir+"_"+str(SNIPPET_LENS[k])+"_ds"
+        hf_cache_dir = cache_dir+str(i)+"_"+str(SNIPPET_LENS[k])+"_ds"
         train_keys = keylists[i]['train_keys']
         #Temporary edit to test with combining eval+test as we are not param optimizing
         eval_keys = keylists[i]['eval_keys']+keylists[i]['train_keys']
@@ -45,8 +46,6 @@ def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool
         #    writer.write("")
         #Continue on
         vectorizer = TfidfVectorizer(norm='l2', tokenizer=whitespace_tokenizer, preprocessor=do_nothing, max_features=2000).fit(train_dss['raw_text'])
-        vecd_train_data = vectorizer.transform(train_dss['raw_text'])
-        vecd_eval_data = vectorizer.transform(eval_dss['raw_text'])
         #print("Worker for length ",SNIPPET_LENS[k]," and keylist ",i," activated!")
         returnable = []
         for pair in params:
@@ -57,8 +56,8 @@ def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool
                     C=pair['c'],
                     tol=pair['tol']
                 )
-                clf.fit(vecd_train_data, train_dss['label'])
-                predicted = clf.predict(vecd_eval_data)
+                clf.fit(vectorizer.transform(train_dss['raw_text']), train_dss['label'])
+                predicted = clf.predict(vectorizer.transform(eval_dss['raw_text']))
                 f1 = f1_score(eval_dss['label'], predicted, average="macro")
                 #Reverse the dictionary
                 index2feature = {}
