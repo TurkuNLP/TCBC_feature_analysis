@@ -32,16 +32,18 @@ def whitespace_tokenizer(ex):
 def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool=True):
     disable_progress_bars()
     filename = "TestResults/FullResultOnlyText/ParamOptim_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
-    cache_file = cache_dir+str(i)+"_"+str(SNIPPET_LENS[k])+".jsonl"
+    cache_file_train = cache_dir+str(i)+"_text_"+str(SNIPPET_LENS[k])+"_train.jsonl"
+    cache_file_test = cache_dir+str(i)+"_text_"+str(SNIPPET_LENS[k])+"_test.jsonl"
     if overwrite or not os.path.exists(filename):
-        hf_cache_dir = cache_dir+str(i)+"_"+str(SNIPPET_LENS[k])+"_ds"
+        hf_cache_dir = cache_dir+str(i)+"_text_"+str(SNIPPET_LENS[k])+"_ds"
         train_keys = keylists[i]['train_keys']
         #Temporary edit to test with combining eval+test as we are not param optimizing
-        eval_keys = keylists[i]['eval_keys']+keylists[i]['train_keys']
-        train_dss = cmf.combineSnippedBooksToDS(train_keys, SNIPPET_LENS[k], hf_cache_dir, cache_file, inc_raw_text=True, folder=BASE_BEG)
-        eval_dss = cmf.combineSnippedBooksToDS(eval_keys, SNIPPET_LENS[k], hf_cache_dir,  cache_file, inc_raw_text=True, folder=BASE_BEG)
+        eval_keys = keylists[i]['eval_keys']+keylists[i]['test_keys']
+        train_dss = cmf.combineSnippedBooksToDS(train_keys, SNIPPET_LENS[k], hf_cache_dir, cache_file_train, inc_raw_text=True, folder=BASE_BEG)
+        eval_dss = cmf.combineSnippedBooksToDS(eval_keys, SNIPPET_LENS[k], hf_cache_dir,  cache_file_test, inc_raw_text=True, folder=BASE_BEG)
         #Empty cache after we don't need it
-        os.remove(cache_file)
+        os.remove(cache_file_train)
+        os.remove(cache_file_test)
         #with open(cache_file, 'w') as writer:
         #    writer.write("")
         #Continue on
@@ -90,7 +92,10 @@ def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool
         shutil.rmtree(hf_cache_dir)
 
 def testParamResults(permutations: int, keylists: list):
+    #For local machines
     pool = mp.Pool(mp.cpu_count())
+    #For CSC environments
+    #pool = mp.Pool(len(os.sched_getaffinity(0)))
     pbar = tqdm(total=permutations*len(SNIPPET_LENS))
     def update(*a):
      pbar.update(1)
@@ -101,7 +106,7 @@ def testParamResults(permutations: int, keylists: list):
     for i in range(permutations):
         #Add to list the test results of our 'manual' study
         for k in range(len(SNIPPET_LENS)):
-            pool.apply_async(manualStudy, [CHOSEN_PARAMS, SNIPPET_LENS, keylists, i, k, cache_dir, False], callback=update)
+            pool.apply_async(manualStudy, [CHOSEN_PARAMS, SNIPPET_LENS, keylists, i, k, cache_dir, True], callback=update)
     #print("All running!")
     pool.close()
     #print("Pool closed!")

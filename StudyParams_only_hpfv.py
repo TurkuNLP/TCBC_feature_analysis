@@ -31,17 +31,19 @@ def whitespace_tokenizer(ex):
 #Version for only using TfIdfVectorizer with raw text as input
 def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool=True):
     disable_progress_bars()
-    filename = "TestResults/ParamOptim_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
-    cache_file = cache_dir+str(i)+"_"+str(SNIPPET_LENS[k])+".jsonl"
+    filename = "TestResults/OnlyHPFV_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
+    cache_file_train = cache_dir+str(i)+"_hpfv_"+str(SNIPPET_LENS[k])+"_train.jsonl"
+    cache_file_test = cache_dir+str(i)+"_hpfv_"+str(SNIPPET_LENS[k])+"_test.jsonl"
     if overwrite or not os.path.exists(filename):
-        hf_cache_dir = cache_dir+str(i)+"_"+str(SNIPPET_LENS[k])+"_ds"
+        hf_cache_dir = cache_dir+str(i)+"_hpfv_"+str(SNIPPET_LENS[k])+"_ds"
         train_keys = keylists[i]['train_keys']
         #Temporary edit to test with combining eval+test as we are not param optimizing
-        eval_keys = keylists[i]['eval_keys']+keylists[i]['train_keys']
-        train_dss = cmf.combineSnippedBooksToDS(train_keys, SNIPPET_LENS[k], hf_cache_dir, cache_file, inc_hpfv=True, folder=BASE_BEG)
-        eval_dss = cmf.combineSnippedBooksToDS(eval_keys, SNIPPET_LENS[k], hf_cache_dir, cache_file, inc_hpfv=True, folder=BASE_BEG)
+        eval_keys = keylists[i]['eval_keys']+keylists[i]['test_keys']
+        train_dss = cmf.combineSnippedBooksToDS(train_keys, SNIPPET_LENS[k], hf_cache_dir, cache_file_train, inc_hpfv=True, folder=BASE_BEG)
+        eval_dss = cmf.combineSnippedBooksToDS(eval_keys, SNIPPET_LENS[k], hf_cache_dir, cache_file_test, inc_hpfv=True, folder=BASE_BEG)
         #Empty cache after we don't need it
-        os.remove(cache_file)
+        os.remove(cache_file_train)
+        os.remove(cache_file_test)
         #with open(cache_file, 'w') as writer:
         #    writer.write("")
         #Continue on
@@ -76,7 +78,10 @@ def manualStudy(params, SNIPPET_LENS, keylists, i, k, cache_dir, overwrite: bool
         shutil.rmtree(hf_cache_dir)
 
 def testParamResults(permutations: int, sniplen: int, keylists: list):
-    pool = mp.Pool(mp.cpu_count())
+    #For local machines
+    pool = mp.Pool(2)
+    #For CSC environments
+    #pool = mp.Pool(len(os.sched_getaffinity(0)))
     SNIPPET_LENS = [sniplen]
     pbar = tqdm(total=permutations*len(SNIPPET_LENS))
     def update(*a):
