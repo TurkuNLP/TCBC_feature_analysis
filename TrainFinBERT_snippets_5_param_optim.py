@@ -134,23 +134,19 @@ def model_init():
 #Define hyperparam spaces to search
 def optuna_hp_space(trial):
     return {
-        "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-4, log=True),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-3, log=True),
         "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [8, 16, 32, 64]),
-        "weight_decay": trial.suggest_float("weight_decay", 0.0, 0.3),
     }
 
 # Set training arguments
 trainer_args = transformers.TrainingArguments(
     "checkpoints",
-    eval_strategy="steps",
-    logging_strategy="steps",
-    eval_steps=100,
-    logging_steps=100,
-    per_device_train_batch_size=8,
-    learning_rate=2e-5,
+    eval_strategy="epoch",
+    save_strategy='epoch',
+    logging_strategy="epoch",
     load_best_model_at_end=True,
+    num_train_epochs=3,
     remove_unused_columns=True,
-    max_steps=10000
 )
 
 #Trainer arguments

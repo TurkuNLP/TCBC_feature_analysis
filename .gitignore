@@ -9,3 +9,6 @@ Keylists.jsonl
 *.pyc
 test_1_2
 cache_dir
+checkpoints/
+mlruns/
+TCBC_v1-0_sniplen5_finetuned_FinBERT/
