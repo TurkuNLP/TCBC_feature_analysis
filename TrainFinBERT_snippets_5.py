@@ -28,8 +28,8 @@ os.environ['WANDB_MODE'] = 'disabled'
 
 def maskPropnWithMask(example):
     df = cmf.snippetConllu2DF(example['conllu'])
-    df.loc[df['upos'] == 'PROPN', 'lemma'] = "[mask]"
-    df.loc[df['upos'] == 'PROPN', 'text'] = "[mask]"
+    df.loc[df['upos'] == 'PROPN', 'lemma'] = "[MASK]"
+    df.loc[df['upos'] == 'PROPN', 'text'] = "[MASK]"
     example['masked_text'] = ' '.join(df['text'].to_numpy('str'))
     if example['label'] == '7-8':
         example['label'] = 0
@@ -128,55 +128,65 @@ class LogSavingCallback(transformers.TrainerCallback):
 training_logs = LogSavingCallback()
 
 #Function that the trainer calls to initialize a fresh model (so that we don't train the same one :)
-def model_init():
-    return transformers.AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=3)
-
-#Define hyperparam spaces to search
-def optuna_hp_space(trial):
-    return {
-        "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-4, log=True),
-        "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [8, 16, 32, 64]),
-        "weight_decay": trial.suggest_float("weight_decay", 0.0, 0.3),
-    }
+model = transformers.AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=3)
 
 # Set training arguments
 trainer_args = transformers.TrainingArguments(
     "checkpoints",
     eval_strategy="steps",
     logging_strategy="steps",
-    eval_steps=100,
-    logging_steps=100,
+    save_total_limit=2,
+    save_steps=10000,
+    eval_steps=5000,
+    logging_steps=5000,
     per_device_train_batch_size=8,
+    per_device_eval_batch_size=32,
     learning_rate=2e-5,
     load_best_model_at_end=True,
     remove_unused_columns=True,
-    max_steps=10000
+    num_train_epochs=2
 )
 
 #Trainer arguments
 trainer = transformers.Trainer(
-    model_init=model_init,
+    model=model,
     args=trainer_args,
     train_dataset=dataset['train'],
     eval_dataset=dataset['eval'],
     processing_class = tokenizer,
     data_collator = data_collator,
     compute_metrics=evaluate_score,
+    callbacks=[early_stopping, training_logs]
 )
 
-#Hyperparam optimization
-best_run = trainer.hyperparameter_search(
-    direction="maximize",
-    backend="optuna",
-    hp_space=optuna_hp_space,
-    n_trials=5,
-    compute_objective=compute_objective,
-)
+trainer.train()
 
-print(best_run)
+trainer.save_model("FinBERT_for_book_snippets_5")
+
+eval_results = trainer.evaluate(dataset["test"])
+
+pprint(eval_results)
+
+print('Accuracy:', eval_results['eval_accuracy'])
 
 #Clean up cache files as we don't need them anymore/we want to save space
 os.remove(cache_file_train)
 os.remove(cache_file_test)
 os.remove(cache_file_eval)
 shutil.rmtree(hf_cache_dir)
+
+#Some plotting
+
+import matplotlib.pyplot as plt
+
+def plot(logs, keys, labels):
+    values = sum([logs[k] for k in keys], [])
+    plt.ylim(max(min(values)-0.1, 0.0), min(max(values)+0.1, 1.0))
+    for key, label in zip(keys, labels):
+        plt.plot(logs["epoch"], logs[key], label=label)
+    plt.legend()
+    plt.show()
+
+plot(training_logs.logs, ["loss", "eval_loss"], ["Training loss", "Evaluation loss"])
+
+plot(training_logs.logs, ["eval_accuracy"], ["Evaluation accuracy"])

@@ -28,8 +28,8 @@ os.environ['WANDB_MODE'] = 'disabled'
 
 def maskPropnWithMask(example):
     df = cmf.snippetConllu2DF(example['conllu'])
-    df.loc[df['upos'] == 'PROPN', 'lemma'] = "[mask]"
-    df.loc[df['upos'] == 'PROPN', 'text'] = "[mask]"
+    df.loc[df['upos'] == 'PROPN', 'lemma'] = "[MASK]"
+    df.loc[df['upos'] == 'PROPN', 'text'] = "[MASK]"
     example['masked_text'] = ' '.join(df['text'].to_numpy('str'))
     if example['label'] == '7-8':
         example['label'] = 0
@@ -135,17 +135,20 @@ def model_init():
 def optuna_hp_space(trial):
     return {
         "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-3, log=True),
+        "num_train_epochs": trial.suggest_int("num_train_epochs", 2, 4),
+        "seed": trial.suggest_int("seed", 1, 40),
         "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [8, 16, 32, 64]),
     }
 
 # Set training arguments
 trainer_args = transformers.TrainingArguments(
     "checkpoints",
-    eval_strategy="epoch",
-    save_strategy='epoch',
-    logging_strategy="epoch",
+    eval_strategy="steps",
+    save_strategy='steps',
+    logging_strategy="steps",
     load_best_model_at_end=True,
-    num_train_epochs=3,
+    eval_steps=1000,
+    per_device_eval_batch_size=64,
     remove_unused_columns=True,
 )
 
@@ -165,11 +168,14 @@ best_run = trainer.hyperparameter_search(
     direction="maximize",
     backend="optuna",
     hp_space=optuna_hp_space,
-    n_trials=5,
+    n_trials=10,
     compute_objective=compute_objective,
 )
 
 print(best_run)
+
+with open("best_run.json", "w+") as f:
+  f.write(json.dumps(best_run.hyperparameters))
 
 #Clean up cache files as we don't need them anymore/we want to save space
 os.remove(cache_file_train)
