@@ -13,3 +13,4 @@ checkpoints/
 mlruns/
 TCBC_v1-0_sniplen5_finetuned_FinBERT/
 FinBERT_for_book_snippets_5/
+quickie.ipynb
