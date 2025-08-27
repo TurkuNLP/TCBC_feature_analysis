@@ -31,13 +31,21 @@ def maskPropnWithMask(example):
     df.loc[df['upos'] == 'PROPN', 'lemma'] = "[MASK]"
     df.loc[df['upos'] == 'PROPN', 'text'] = "[MASK]"
     example['masked_text'] = ' '.join(df['text'].to_numpy('str'))
-    if example['label'] == '7-8':
-        example['label'] = 0
-    elif example['label'] == '9-12':
-        example['label'] = 1
-    else:
-        example['label'] = 2
+    #if example['label'] == '7-8':
+    #    example['label'] = 0
+    #elif example['label'] == '9-12':
+    #    example['label'] = 1
+    #else:
+    #    example['label'] = 2
     return example
+
+def reMapLabels(ex):
+    age = ex['age']
+    if age < 13:
+        ex['label'] = 0
+    else:
+        ex['label'] = 1
+    return ex
 
 keylists = []
 with open(KEYLISTS, 'r') as f:
@@ -65,6 +73,9 @@ test_dss = cmf.combineSnippedBooksToDS(test_keys, SNIPPET_LENS[0], hf_cache_dir,
 train_dss = train_dss.map(maskPropnWithMask)
 eval_dss = eval_dss.map(maskPropnWithMask)
 test_dss = test_dss.map(maskPropnWithMask)
+train_dss = train_dss.map(reMapLabels)
+eval_dss = eval_dss.map(reMapLabels)
+test_dss = test_dss.map(reMapLabels)
 
 #Combine into a DatasetDict for cleaner code
 dataset = DatasetDict({'train':train_dss, 'test':test_dss, 'eval':eval_dss})
@@ -136,7 +147,7 @@ trainer_args = transformers.TrainingArguments(
     eval_strategy="steps",
     logging_strategy="steps",
     save_total_limit=2,
-    save_steps=10000,
+    save_steps=5000,
     eval_steps=5000,
     logging_steps=5000,
     per_device_train_batch_size=8,
@@ -161,7 +172,7 @@ trainer = transformers.Trainer(
 
 trainer.train()
 
-trainer.save_model("FinBERT_for_book_snippets_5")
+trainer.save_model("FinBERT_for_book_snippets_5_two_groups")
 
 eval_results = trainer.evaluate(dataset["test"])
 
