@@ -54,7 +54,7 @@ def mapConlluData2RawLemmas(ex):
 #Version for only using TfIdfVectorizer with raw text as input
 def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True):
     disable_progress_bars()
-    filename = "TestResults/FullResultOnlyTextNew/ParamOptim_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
+    filename = "TestResults/FullResultOnlyTextNew/OnlyText_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
     if overwrite or not os.path.exists(filename):
         train_keys = keylists[i]['train_keys']
         eval_keys = keylists[i]['eval_keys']
@@ -123,6 +123,33 @@ def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True
         returnable['tol'] = study.best_trial.params['tol']
         returnable['penalty'] = study.best_trial.params['pen']
         returnable['c_eval_scores'] = c_eval_pairs
+        #Add important features
+        #Reverse the dictionary
+        index2feature = {}
+        for feature,idx in vectorizer.vocabulary_.items():
+            assert idx not in index2feature #This really should hold
+            index2feature[idx]=feature
+        #Now we can query index2feature to get the feature names as we need
+        high_prio = {}
+        # make a list of (weight, index), sort it
+        for j in clf.classes_:
+            lst=[]
+            for idx,weight in enumerate(clf.coef_[list(clf.classes_).index(j)]):
+                lst.append((weight,idx))
+            lst.sort() #sort
+
+            #Print first few and last few
+            #for weight,idx in lst[:20]: #first 30 (ie lowest weight)
+            #    print(index2feature[idx])
+            #print("----------------------------------------------------")
+            #Take the last 30 (lst[-30:]) but these now come from weakest to strongest
+            #so reverse the list using [::-1]
+            highest_prio = []
+            for weight,idx in lst[-100:][::-1]:
+                highest_prio.append(index2feature[idx])
+            high_prio[j] = highest_prio
+        for h in high_prio:
+            returnable['important_features_for_'+h] = high_prio[h]
         with open(filename, 'w') as f:
             f.write(json.dumps(returnable))
 

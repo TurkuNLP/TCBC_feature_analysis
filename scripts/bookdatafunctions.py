@@ -1037,11 +1037,11 @@ def buildIdTreeFromConllu(conllu: pd.DataFrame) -> dict[int,list[int]]:
             sentence_ids.append((start,i-1))
             start = i
     sentence_ids.append((start, len(conllu)-1))
-    #Build tress for each sentence
+    #Build trees for each sentence
     for sentence in sentence_ids:
         root = 0
         sent_locs = range(sentence[0],sentence[1]+1)
-        heads = conllu.iloc[sentence[0]:sentence[1]]['head'].to_numpy(int)-1
+        heads = conllu.iloc[sentence[0]:sentence[1]+1]['head'].to_numpy(int)-1
         sent_tree = {x:[] for x in sent_locs}
         for j in range(len(heads)):
             if heads[j] == -1:
@@ -1049,7 +1049,7 @@ def buildIdTreeFromConllu(conllu: pd.DataFrame) -> dict[int,list[int]]:
             else:
                 children = sent_tree[sent_locs[heads[j]]]
                 children.append(sent_locs[j])
-                sent_tree[sent_locs[heads[j]]] = children
+                sent_tree[sent_locs[heads[j]]] = children            
         id_tree[root] = sent_tree
     return id_tree
 

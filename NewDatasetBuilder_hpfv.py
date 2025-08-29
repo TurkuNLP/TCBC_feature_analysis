@@ -1,0 +1,92 @@
+#Imports
+from scripts import bookdatafunctions as bdf
+from scripts import corpusMLfunctions as cmf
+import pandas as pd
+import numpy as np
+from datasets import Dataset, disable_progress_bars
+import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.svm import LinearSVC
+from sklearn import metrics
+from sklearn.metrics import f1_score
+import optuna
+import json
+import multiprocessing as mp
+import shutil
+import warnings
+from tqdm import tqdm
+from pprint import pprint
+import sys
+
+#Constants
+AGES = ['5','6','7','8','9','10','11','12','13','14','15']
+KEYLISTS = "Keylists.jsonl"
+keylists = []
+with open(KEYLISTS, 'r') as f:
+    for line in f:
+        keylists.append(json.loads(line))
+
+#Helper functions
+def do_nothing(ex):
+    return ex.lower()
+
+def conllu_tokenizer(ex):
+    return ex.replace("\n", "\t").replace("|", "\t").split("\t")
+
+def whitespace_tokenizer(ex):
+    return ex.split(" ")
+
+def assignLabel(ex):
+    age = int(bdf.findAgeFromID(ex))
+    if age < 9:
+        return '7-8'
+    elif age < 13:
+        return '9-12'
+    else:
+        return '13+'
+
+def buildDatasetFromRawConllus(conllu_folder, age_mapping_file):
+    to_convert = []
+    isbn2age_series = pd.DataFrame(pd.read_excel(age_mapping_file, index_col=0))
+    for key in os.listdir(conllu_folder):
+        book_id = key[:14] +  str(isbn2age_series.at[int(key[:13]),isbn2age_series.columns[0]]) + key[15:17]
+        age = isbn2age_series.at[int(key[:13]),isbn2age_series.columns[0]]
+        with open(conllu_folder+key, 'r', encoding='UTF-8') as reader:
+            conllu_text = reader.read()
+        to_convert.append({'book_id':book_id, 'data':conllu_text})
+    return Dataset.from_list(to_convert)
+
+#Function for generating a snippet dataset
+def generateSnippetDatasetFromRawConllu(ex, sniplen):
+        conllu = ex['data'][0]
+        new_data = []
+        label = assignLabel(ex['book_id'][0])
+        df = cmf.snippetConllu2DF(conllu)
+        tree = bdf.buildIdTreeFromConllu(df)
+        df.loc[df['upos'] == 'PROPN', 'lemma'] = "[MASK]"
+        df.loc[df['upos'] == 'PROPN', 'text'] = "[MASK]"
+        conllu_lines = ["\t".join(x) for x in df.to_numpy("str").tolist()]
+        tree_heads = list(tree.keys())
+        start = 0
+        for i in range(sniplen-1, len(tree), sniplen):
+            new_data.append("\n".join(conllu_lines[start:list(tree[tree_heads[i]].keys())[-1]+1]))
+            start = list(tree[tree_heads[i]].keys())[-1]+1
+        return {"book_id":[ex['book_id'][0]]*len(new_data), "data": new_data, 'label':[label]*len(new_data)}
+
+def generateHPFVForDataset(ex):
+    conllu = ex['data']
+    df = cmf.snippetConllu2DF(conllu)
+    hpfv = cmf.customConlluVectorizer(df)
+    ex['data'] = hpfv
+    return ex
+
+
+#Main function
+def main(cmd_args):
+    #Read sniplen wanted
+    sniplen = int(cmd_args[0])
+    #Generate and save to disk sniplen ??
+    Dataset.load_from_disk("cache_dir/sniplen"+str(sniplen)).map(generateHPFVForDataset, num_proc=len(os.sched_getaffinity(0))).save_to_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv", num_proc=len(os.sched_getaffinity(0)))
+#Pass cmd args to main function
+if __name__ == "__main__":
+    main(sys.argv[1:])
