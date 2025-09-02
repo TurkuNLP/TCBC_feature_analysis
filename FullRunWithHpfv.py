@@ -14,6 +14,8 @@ from datasets import Dataset
 from scripts import bookdatafunctions as bdf
 import optuna
 import warnings
+import scipy as sp
+from sklearn.preprocessing import normalize
 #Constants
 BASE_BEG = "SnippetDatasets/"
 BASE_MID = "sniplen_"
@@ -51,7 +53,7 @@ def mapConlluData2RawLemmas(ex):
     return {'data':[conllu2RawLemmas(x) for x in ex['data']]}   
 
 #Version for only using TfIdfVectorizer with raw text as input
-def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True):
+def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True, multiple_jobs: int=1):
     disable_progress_bars()
     filename = "TestResults/FullResultOnlyHPFVNew/OnlyHpfv_List_"+str(i)+"_SnipLen_"+str(SNIPPET_LENS[k])+"_Results.jsonl"
     if overwrite or not os.path.exists(filename):
@@ -67,6 +69,11 @@ def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True
         #Test dataset
         test_ds = base_dataset.filter(lambda x: x['book_id'] in test_keys).shuffle()
         test_ds = test_ds.map(mapLabels, batched=True, batch_size=32, load_from_cache_file=False)
+        
+        #Vectorize data
+        vectorized_train = sp.sparse.coo_array(np.array(train_ds['data']))
+        vectorized_eval = sp.sparse.coo_array(np.array(eval_ds['data']))
+        vectorized_test = sp.sparse.coo_array(np.array(test_ds['data']))
 
         returnable = {}
         c_eval_pairs= []
@@ -83,16 +90,16 @@ def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True
                 tol=tol,
                 penalty=pen
             )
-            clf.fit(train_ds['data'],train_ds['label'])
-            predicted = clf.predict(eval_ds['data'])
-            f1 = f1_score(eval_ds['label'], predicted, average="macro")
+            clf.fit(vectorized_train,np.array(train_ds['label']))
+            predicted = clf.predict(vectorized_eval)
+            f1 = f1_score(np.array(eval_ds['label']), predicted, average="macro")
             c_eval_pairs.append([c, f1])
             return f1
 
         # Your code for hyperparameter optimization here
         study = optuna.create_study(direction='maximize')
         optuna.logging.disable_default_handler()
-        study.optimize(objective, n_trials=1)
+        study.optimize(objective, n_trials=25, n_jobs=multiple_jobs)
 
         #Run with best params
         clf = LinearSVC(
@@ -101,8 +108,8 @@ def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True
             C=study.best_trial.params['c'],
             tol=study.best_trial.params['tol'],
         )
-        clf.fit(train_ds['data'], train_ds['label'])
-        test_predict = clf.predict(test_ds['data'])
+        clf.fit(vectorized_train, np.array(train_ds['label']))
+        test_predict = clf.predict(vectorized_test)
 
         #Assign returnble values
         returnable['keylist_id'] = i
@@ -130,25 +137,27 @@ def manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, overwrite: bool=True
         with open(filename, 'w') as f:
             f.write(json.dumps(returnable))
 
-def testParamResults(permutations: int, keylists: list):
+def testParamResults(permutations: int, sniplen: int, keylists: list):
     warnings.filterwarnings('ignore') 
     os.environ['PYTHONWARNINGS']='ignore'
     disable_progress_bars()
-    #For CSC environments
-    pool = mp.Pool(len(os.sched_getaffinity(0)))
-    pbar = tqdm(total=permutations*len(SNIPPET_LENS))
+    pbar = tqdm(total=permutations)
     def update(*a):
      pbar.update(1)
+    #For CSC environments
+    pool = mp.Pool(len(os.sched_getaffinity(0)))
     for i in range(permutations):
         #Add to list the test results of our 'manual' study
-        for k in range(len(SNIPPET_LENS)):
-            base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(SNIPPET_LENS[k])+"_hpfv")
-            pool.apply_async(manualStudy, [SNIPPET_LENS, keylists, i, k, base_dataset, True], callback=update)
+            base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(SNIPPET_LENS[sniplen])+"_hpfv")
+            #manualStudy(SNIPPET_LENS, keylists, i, k, base_dataset, True)
+            #pbar.update(1)
+            pool.apply_async(manualStudy, [SNIPPET_LENS, keylists, i, sniplen, base_dataset, True], callback=update)
     #print("All running!")
     pool.close()
     #print("Pool closed!")
     pool.join()
     #print("Waiting done!")
+
     
     
 
@@ -159,7 +168,7 @@ def main(cmd_args):
     with open(KEYLISTS, 'r') as f:
         for line in f:
             keylists.append(json.loads(line))
-    testParamResults(int(cmd_args[0]), keylists)
+    testParamResults(int(cmd_args[0]), int(cmd_args[1]), keylists)
 #Pass cmd args to main function
 if __name__ == "__main__":
     main(sys.argv[1:])
