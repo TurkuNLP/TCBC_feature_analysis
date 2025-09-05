@@ -14,6 +14,7 @@ import os
 import warnings
 from pprint import pprint
 import multiprocessing as mp
+from tqdm import tqdm
 
 #Constants
 keylists = []
@@ -138,6 +139,7 @@ def getOptimHyperparam(base_dataset: Dataset, keylist_num: int, num_of_rounds: i
     return best_params
 
 def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf: bool):
+    #Function for coordinating the hyperparameter optimization for each estimator to be used in testing COVOC
     warnings.filterwarnings('ignore') 
     os.environ['PYTHONWARNINGS']='ignore'
     disable_progress_bars()
@@ -148,9 +150,9 @@ def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf
     results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf)
     filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)
     if tfidf:
-        filename += "_tfidf_"
+        filename += "_tfidf"
     else:
-        filename += "_hpfv_"
+        filename += "_hpfv"
     filename += ".jsonl"
     with open(filename, 'w') as f:
         f.write('\n'.join(map(json.dumps, results)))
@@ -237,11 +239,14 @@ def doFullRun(sniplen: int, tfidf: bool):
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen))
     else:
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv")
+    pbar = tqdm(total=100)
+    def update(*a):
+     pbar.update(1)
     #For CSC environments
     pool = mp.Pool(len(os.sched_getaffinity(0)))
     #For each keylist
-    #for i in range(100):
-    #    pool.apply_async(manualStudy, [SNIPPET_LENS, keylists, i, sniplen, base_dataset, True], callback=update)
+    for i in range(100):
+        pool.apply_async(testCOVOC, [base_dataset, sniplen, i, tfidf], callback=update)
     #print("All running!")
     pool.close()
     #print("Pool closed!")
@@ -260,7 +265,7 @@ def main(cmd_args):
     #         hyperparamOptimize(sniplen, keylist_num, 100, False)
             #With tfidf
     #        hyperparamOptimize(sniplen, keylist_num, 100, True)
-    hyperparamOptimize(int(cmd_args[0]), int(cmd_args[1]), int(cmd_args[2]), bool(cmd_args[3]))
+    hyperparamOptimize(int(cmd_args[0]), int(cmd_args[1]), int(cmd_args[2]), bool(int(cmd_args[3])))
 #Pass cmd args to main function
 if __name__ == "__main__":
     main(sys.argv[1:])
