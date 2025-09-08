@@ -65,7 +65,26 @@
 | Negative participle | PartForm=Neg | 92 |
 | Past participle | PartForm=Past | 93 |
 | Present participle | PartForm=Pres | 94 |
-
+| Cardinal number | NumType=Card | 95 |
+| Ordinal number | NumType=Ord | 96 |
+| Plural possessor | Number[psor]=Plur | 97 |
+| Singular possessor | Number[psor]=Sing | 98 |
+| First infinitive | InfForm=1 | 99 |
+| Second infinitive | InfForm=2 | 100 |
+| Third infinitive | InfForm=3 | 101 |
+| Foreign word | Foreign=Yes | 102 |
+| Derivation with suffix -inen | Derivation=Inen | 103 |
+| Derivation with suffix -ja | Derivation=Ja | 104 |
+| Derivation with suffix -lainen | Derivation=Lainen | 105 |
+| Derivation with suffix -llinen | Derivation=Llinen | 106 |
+| Derivation with suffix -tar | Derivation=Tar | 107 |
+| Derivation with suffix -ton | Derivation=Ton | 108 |
+| Derivation with suffix -ttain | Derivation=Ttain | 109 |
+| Derivation with suffix -u | Derivation=U | 110 |
+| Derivation with suffix -vs | Derivation=Vs | 111 |
+| Postposition | AdpType=Post | 112 |
+| Preposition | AdpType=Pre | 113 |
+| Abbreviation | Abbr=Yes | 114 |
 
 
 ## Readability
