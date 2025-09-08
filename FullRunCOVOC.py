@@ -126,7 +126,7 @@ def getOptimHyperparam(base_dataset: Dataset, keylist_num: int, num_of_rounds: i
         # Your code for hyperparameter optimization here
         study = optuna.create_study(direction='maximize')
         #optuna.logging.disable_default_handler()
-        study.optimize(objective, n_trials=num_of_rounds, n_jobs=-1)
+        study.optimize(objective, n_trials=num_of_rounds, n_jobs=len(os.sched_getaffinity(0)))
 
         optimal['id'] = pair
         optimal['f1'] = study.best_value
@@ -137,25 +137,6 @@ def getOptimHyperparam(base_dataset: Dataset, keylist_num: int, num_of_rounds: i
         best_params.append(optimal)
     
     return best_params
-
-def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf: bool):
-    #Function for coordinating the hyperparameter optimization for each estimator to be used in testing COVOC
-    warnings.filterwarnings('ignore') 
-    os.environ['PYTHONWARNINGS']='ignore'
-    disable_progress_bars()
-    if tfidf:
-        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen))
-    else:
-        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv")
-    results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf)
-    filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)
-    if tfidf:
-        filename += "_tfidf"
-    else:
-        filename += "_hpfv"
-    filename += ".jsonl"
-    with open(filename, 'w') as f:
-        f.write('\n'.join(map(json.dumps, results)))
 
 def testCOVOC(base_dataset: Dataset, sniplen: int, keylist_num: int, tfidf: bool):
     train_keys = keylists[keylist_num]['train_keys']
@@ -228,7 +209,24 @@ def testCOVOC(base_dataset: Dataset, sniplen: int, keylist_num: int, tfidf: bool
     with open(filename, 'w') as f:
         f.write(json.dumps(returnable))
     
-
+def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf: bool):
+    #Function for coordinating the hyperparameter optimization for each estimator to be used in testing COVOC
+    warnings.filterwarnings('ignore') 
+    os.environ['PYTHONWARNINGS']='ignore'
+    disable_progress_bars()
+    if tfidf:
+        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen))
+    else:
+        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv")
+    results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf)
+    filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)
+    if tfidf:
+        filename += "_tfidf"
+    else:
+        filename += "_hpfv"
+    filename += ".jsonl"
+    with open(filename, 'w') as f:
+        f.write('\n'.join(map(json.dumps, results)))
 
 
 def doFullRun(sniplen: int, tfidf: bool):
