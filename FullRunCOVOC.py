@@ -52,17 +52,19 @@ def mapConlluData2RawLemmas(ex):
 
 def getFeaturesForEachBinaryPair(clf):
         labels = clf.classes_
-        estimators = {str(labels[i])+" vs. "+str(labels[j]):clf.estimators_[i] for i in range(3) for j in range(i+1, 3)}
+        estimator_keys = [str(labels[i])+" vs. "+str(labels[j]) for i in range(3) for j in range(i+1, 3)]
+        estimators = {estimator_keys[i]:clf.estimators_[i] for i in range(3)}
         returnable = {}
         for e in estimators:
             lst=[]
             for idx,weight in enumerate(estimators[e].coef_[0]):
                 lst.append((weight,idx))
-            lst.sort() #sort
-            highest_prio = []
-            for weight,idx in lst[-100:][::-1]:
-                highest_prio.append(idx)
-            returnable[e] = highest_prio
+            #lst.sort() #sort
+            #highest_prio = []
+            #for weight,idx in lst[-100:][::-1]:
+            #    highest_prio.append(idx)
+            #returnable[e] = highest_prio
+            returnable[e] = lst
         return returnable
     
 #Important functions
@@ -157,15 +159,15 @@ def testCOVOC(base_dataset: Dataset, sniplen: int, keylist_num: int, tfidf: bool
     best_params = []
     filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)
     if tfidf:
-        filename += "_tfidf_"
+        filename += "_tfidf"
     else:
-        filename += "_hpfv_"
+        filename += "_hpfv"
     filename += ".jsonl"
     with open(filename, 'r') as reader:
         for line in reader:
             best_params.append(json.loads(line))
     #Initialize LinearSVC models used in our customized OneVsOneClassifier
-    lsvcs = [LinearSVC(c=x['c'], tol=x['tol']) for x in best_params]
+    lsvcs = [LinearSVC(C=x['c'], tol=x['tol']) for x in best_params]
     estimators = {"0_1":lsvcs[0], "0_2":lsvcs[1], "1_2":lsvcs[2]}
 
     #Vectorize our data
@@ -201,7 +203,7 @@ def testCOVOC(base_dataset: Dataset, sniplen: int, keylist_num: int, tfidf: bool
         returnable[est] = feature_importance[est]
 
 
-    filename = "TestResults/COVOCFullResult/Sniplen_"+str(sniplen)+"_Keylist_"+str(keylist_num)+"_"
+    filename = "TestResults/COVOC_FullResult/Sniplen_"+str(sniplen)+"_Keylist_"+str(keylist_num)+"_"
     if tfidf:
         filename += "tfidf.json"
     else:
@@ -245,6 +247,8 @@ def doFullRun(sniplen: int, tfidf: bool):
     #For each keylist
     for i in range(100):
         pool.apply_async(testCOVOC, [base_dataset, sniplen, i, tfidf], callback=update)
+        #Manual test case
+        #testCOVOC(base_dataset, sniplen, i, tfidf)
     #print("All running!")
     pool.close()
     #print("Pool closed!")
@@ -254,16 +258,11 @@ def doFullRun(sniplen: int, tfidf: bool):
 
 #Main function
 def main(cmd_args):
-    #Manually setting this up for a big run
-    #For each keylist
-    #for keylist_num in range(100):
-        #For each sniplen
-    #     for sniplen in [100, 75, 50, 25, 10, 5]:
-            #With hpfv
-    #         hyperparamOptimize(sniplen, keylist_num, 100, False)
-            #With tfidf
-    #        hyperparamOptimize(sniplen, keylist_num, 100, True)
-    hyperparamOptimize(int(cmd_args[0]), int(cmd_args[1]), int(cmd_args[2]), bool(int(cmd_args[3])))
+    #For performing the hyperparam optimization
+    #hyperparamOptimize(int(cmd_args[0]), int(cmd_args[1]), int(cmd_args[2]), bool(int(cmd_args[3])))
+    #For performing the tests
+    doFullRun(int(cmd_args[0]), bool(int(cmd_args[1])))
+    
 #Pass cmd args to main function
 if __name__ == "__main__":
     main(sys.argv[1:])

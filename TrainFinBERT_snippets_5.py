@@ -12,7 +12,7 @@ import json
 
 #Some constants and other housekeeping before diving into coding
 MODEL_NAME = "TurkuNLP/bert-base-finnish-cased-v1"
-SPLIT_ID = 39
+SPLIT_ID = 37
 pprint = PrettyPrinter(compact=True).pprint
 os.environ['WANDB_MODE'] = 'disabled'
 
