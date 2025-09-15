@@ -285,7 +285,7 @@ def generateAgeStratificationAmounts(corpus_with_ages: dict[str,pd.DataFrame], t
     ages = bdf.getAvailableAges(corpus_with_ages)
     for age in ages:
         raw_amount = len([x for x in list(corpus_with_ages.keys()) if bdf.findAgeFromID(x)==str(age)])
-        train[age] = int(raw_amount*train_size)
+        train[age] = math.ceil(int(raw_amount*train_size))
         test[age] = int((raw_amount-train[age])/2)
         eval[age] = int((raw_amount-train[age])/2)
     return train, test, eval

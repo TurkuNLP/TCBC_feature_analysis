@@ -100,6 +100,8 @@ def main(cmd_args):
     sniplen = int(cmd_args[0])
     #Generate and save to disk sniplen ??
     raw_ds = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)).map(generateHPFVForDataset, num_proc=len(os.sched_getaffinity(0)))
+    #Filter out non novels
+    raw_ds = raw_ds.filter(lambda x: x['book_id'][-1] == '1')
     #Normalizing the data
     all_values = np.array(raw_ds['data'])
     maxs = all_values.max(axis=0)
@@ -107,7 +109,7 @@ def main(cmd_args):
     def map2MinMax(ex):
         return {'data':[minMaxNormalization(mins, maxs, x) for x in ex['data']]}
     #Write to disk the normalized version
-    raw_ds.map(map2MinMax, batched=True).save_to_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv", num_proc=len(os.sched_getaffinity(0)))
+    raw_ds.map(map2MinMax, batched=True).save_to_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv_novels", num_proc=len(os.sched_getaffinity(0)))
 #Pass cmd args to main function
 if __name__ == "__main__":
     main(sys.argv[1:])

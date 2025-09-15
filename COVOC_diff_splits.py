@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 #Constants
 keylists = []
-with open("Keylists.jsonl", 'r') as f:
+with open("NewKeylists_only_novels.jsonl", 'r') as f:
     for line in f:
         keylists.append(json.loads(line))
 
@@ -81,14 +81,14 @@ def getOptimHyperparam(base_dataset: Dataset, keylist_num: int, num_of_rounds: i
 
     #Training dataset
     train_ds = base_dataset.filter(lambda x: x['book_id'] in train_keys).shuffle()
-    train_ds = train_ds.map(mapLabels, batched=True, batch_size=32, load_from_cache_file=False)
+    train_ds = train_ds.map(mapLabels, batched=True)
     if tfidf:
-        train_ds = train_ds.map(mapConlluData2RawLemmas, batched=True, batch_size=16, load_from_cache_file=False)
+        train_ds = train_ds.map(mapConlluData2RawLemmas, batched=True)
     #Evaluation dataset
     eval_ds = base_dataset.filter(lambda x: x['book_id'] in eval_keys).shuffle()
-    eval_ds = eval_ds.map(mapLabels, batched=True, batch_size=32, load_from_cache_file=False)
+    eval_ds = eval_ds.map(mapLabels, batched=True)
     if tfidf:
-        eval_ds = eval_ds.map(mapConlluData2RawLemmas, batched=True, batch_size=16, load_from_cache_file=False)
+        eval_ds = eval_ds.map(mapConlluData2RawLemmas, batched=True)
 
     #Filter datasets to fit our needs
     train_dss = {str(i)+"_"+str(j):train_ds.filter(lambda x: x['label'] == labels[i] or x['label'] == labels[j]) for i in range(3) for j in range(i+1, 3)}
@@ -145,28 +145,24 @@ def getOptimHyperparam(base_dataset: Dataset, keylist_num: int, num_of_rounds: i
     
     return best_params
 
-def testCOVOC(base_dataset: Dataset, sniplen: int, keylist_num: int, tfidf: bool):
+def testCOVOC(base_dataset: Dataset, sniplen: int, keylist_num: int, tfidf: bool, keylist_type):
     train_keys = keylists[keylist_num]['train_keys']
     test_keys = keylists[keylist_num]['test_keys']
 
     #Training dataset
     train_ds = base_dataset.filter(lambda x: x['book_id'] in train_keys).shuffle()
-    #train_ds = train_ds.map(mapLabels, batched=True, batch_size=32, load_from_cache_file=False)
     train_ds = train_ds.map(mapLabels, batched=True)
     if tfidf:
-        #train_ds = train_ds.map(mapConlluData2RawLemmas, batched=True, batch_size=16, load_from_cache_file=False)
         train_ds = train_ds.map(mapConlluData2RawLemmas, batched=True)
     #Test dataset
     test_ds = base_dataset.filter(lambda x: x['book_id'] in test_keys).shuffle()
-    #test_ds = test_ds.map(mapLabels, batched=True, batch_size=32, load_from_cache_file=False)
     test_ds = test_ds.map(mapLabels, batched=True)
     if tfidf:
-        #test_ds = test_ds.map(mapConlluData2RawLemmas, batched=True, batch_size=16, load_from_cache_file=False)
         test_ds = test_ds.map(mapConlluData2RawLemmas, batched=True)
 
     #Load optimized parameters
     best_params = []
-    filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)
+    filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)+"_"+keylist_type
     if tfidf:
         filename += "_tfidf"
     else:
@@ -216,25 +212,27 @@ def testCOVOC(base_dataset: Dataset, sniplen: int, keylist_num: int, tfidf: bool
         returnable[est] = feature_importance[est]
 
 
-    filename = "TestResults/COVOC_FullResult/Sniplen_"+str(sniplen)+"_Keylist_"+str(keylist_num)+"_"
+    filename = "TestResults/COVOC_FullResult/Sniplen_"+str(sniplen)+"_Keylist_"+str(keylist_num)+"_"+keylist_type
     if tfidf:
-        filename += "tfidf.json"
+        filename += "_tfidf.json"
     else:
-        filename += "hpfv.json"
+        filename += "_hpfv.json"
     with open(filename, 'w') as f:
         f.write(json.dumps(returnable))
     
-def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf: bool):
+def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf: bool, keylist_type):
     #Function for coordinating the hyperparameter optimization for each estimator to be used in testing COVOC
     warnings.filterwarnings('ignore') 
     os.environ['PYTHONWARNINGS']='ignore'
     disable_progress_bars()
     if tfidf:
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen))
+    elif keylist_type == "novels":
+        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv_novels")
     else:
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv")
-    results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf)
-    filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)
+    results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf, keylist_type)
+    filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)+"_"+keylist_type
     if tfidf:
         filename += "_tfidf"
     else:
@@ -244,12 +242,14 @@ def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf
         f.write('\n'.join(map(json.dumps, results)))
 
 
-def doFullRun(sniplen: int, tfidf: bool):
+def doFullRun(sniplen: int, tfidf: bool, keylist_type):
     warnings.filterwarnings('ignore') 
     os.environ['PYTHONWARNINGS']='ignore'
     disable_progress_bars()
     if tfidf:
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen))
+    elif keylist_type == "novels":
+        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv_novels")
     else:
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv")
     pbar = tqdm(total=100)
@@ -259,7 +259,7 @@ def doFullRun(sniplen: int, tfidf: bool):
     pool = mp.Pool(len(os.sched_getaffinity(0)))
     #For each keylist
     for i in range(100):
-        pool.apply_async(testCOVOC, [base_dataset, sniplen, i, tfidf], callback=update)
+        pool.apply_async(testCOVOC, [base_dataset, sniplen, i, tfidf, keylist_type], callback=update)
         #Manual test case
         #testCOVOC(base_dataset, sniplen, i, tfidf)
     #print("All running!")

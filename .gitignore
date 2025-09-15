@@ -16,3 +16,4 @@ FinBERT_for_book_snippets_5/
 quickie.ipynb
 TCBC_datasets/
 FinBERT*
+*.jsonl

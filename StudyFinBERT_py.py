@@ -11,8 +11,8 @@ import json
 
 # %%
 #Some constants and other housekeeping before diving into coding
-MODEL_NAME = "FinBERT_for_book_snippets_5_new/"
 SPLIT_ID = 39
+MODEL_NAME = "FinBERT_for_book_snippets_5_new_split_"+str(SPLIT_ID)+"/"
 pprint = PrettyPrinter(compact=True).pprint
 os.environ['WANDB_MODE'] = 'disabled'
 
@@ -95,7 +95,7 @@ dataset = dataset.map(tokenize, num_proc=len(os.sched_getaffinity(0)), batched=T
 def evaluate_score(pred):
   y_pred = pred.predictions.argmax(axis=-1)
   y_true = pred.label_ids
-  return {'accuracy' : f1_score(y_true, y_pred, average='macro'), 'report':classification_report(y_true, y_pred)}
+  return {'accuracy' : f1_score(y_true, y_pred, average='macro'), 'report':classification_report(y_true, y_pred), 'conf_matrix':confusion_matrix(y_true, y_pred).tolist()}
 
 # %%
 #Trainer arguments
@@ -108,6 +108,9 @@ trainer = transformers.Trainer(
 
 # %%
 test_results = trainer.evaluate(dataset['test'])
+
+with open("TestResults/FinBERT_split_"+str(SPLIT_ID)+".json", 'w') as writer:
+    writer.write(json.dumps(test_results))
 
 pprint(test_results)
 
