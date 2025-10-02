@@ -57,13 +57,14 @@ def initBooksFromConllus(conllu_path: str) -> dict:
     for file in os.listdir(conllu_path):
         #Opening conllus contents
         with open(conllu_path+"/"+file) as conllu_file:
+            #Read lines from the conllu files
+            conllu_lines = [x[:-1] for x in conllu_file if x[0] != '#' and x[0] != '\n']
             #Transform into dataframe
-            df = pd.read_csv(conllu_file, sep="[\t]",skip_blank_lines=True,  header=None, on_bad_lines='error', engine='python')
+            df = pd.DataFrame([line.split('\t') for line in conllu_lines])
             #Set names for columns
             df.columns = ['id', 'text', 'lemma', 'upos', 'xpos', 'feats', 'head', 'deprel', 'deps', 'misc']
-            #Append as dict juuuuust in case we need the metadata
-            #Clip at 17 as the format for the filenames are standardized
-            books[file[:17]] = df
+            #Clip at when the file type starts
+            books[file[:file.find('.')]] = df
     return books
 
 #Functions which extract data from a dictionary to get data on sentences
@@ -905,20 +906,6 @@ def findAgeFromID(key: str) -> str:
     "Function that returns the age information embedded in a book id"
     return key[key.find('_')+1:key.find('_')+1+key[key.find('_')+1:].find('_')]
 
-def mapGroup2Age(corpus: dict[str,pd.DataFrame], sheet_path: str) -> dict[str,pd.DataFrame]:
-    """
-    Function for changing the file keys to use exact ages instead of age groups [1,3]
-    """
-
-    returnable = {}
-    isbn2age_series = pd.DataFrame(pd.read_excel(sheet_path, index_col=0))
-    for key in corpus:
-        df = corpus[key]
-        new_key = key
-        new_key = key[:14] +  str(isbn2age_series.at[int(key[:13]),isbn2age_series.columns[0]]) + key[15:]
-        returnable[new_key] = df
-    return returnable
-
 def mapExactAgeToMean(corpus: dict[str,pd.DataFrame]) -> dict[str,pd.DataFrame]:
     """
     Function for taking exact ages in ids and mapping them to age groups/means of age intervals
@@ -1027,7 +1014,9 @@ def buildIdTreeFromConllu(conllu: pd.DataFrame) -> dict[int,list[int]]:
     """
     Build a tree for each sentence in a conllu file, where each node points to the corresponding DataFrame row of a line in the conllu-file
     """
-    #conllu['id'] = conllu['id'].apply(lambda x: int(x))
+    #Due to using properly formatted CoNLLUs, deal with 'ettei' etc. compounds by ignoring them (as they should be on the syntactic tree)
+    conllu = conllu[conllu['head'] != '_']
+    conllu['id'] = conllu['id'].apply(lambda x: str(x))
     id_tree = {}
     #First fetch ids marking boundaries for each sentence
     sentence_ids = []
@@ -1514,15 +1503,21 @@ def getStatisticsForDatabasePosFeats(sub_corpora, word_age_appearances=None, lem
         return returnable
 
 
-def formatDataForPaperOutputBasic(corpus: dict[str,pd.DataFrame]):
+def formatDataForPaperOutputBasic(corpus: dict[str,pd.DataFrame], output_dir: str):
     """
     Function which takes in a corpus and provides four sets of dictionaries as sets of csv-files:
     1. contains data for exact ages as subcorpora
     2. contains data for age groups as subcorpora
     3. contains data for registers as subcorpora
     4. contains data for the whole corpus
+
+    output_dir is the base folder in which all data files will be put into
     """
     ages = sorted(getAvailableAges(corpus))
+
+    #If output_dir does not yet exist, create it
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
 
     ready_dfs_ages = {}
     ready_dfs_groups = {}
@@ -1546,7 +1541,7 @@ def formatDataForPaperOutputBasic(corpus: dict[str,pd.DataFrame]):
     #Keep track of when words and lemmas first appear in terms of intended reading age
     ready_dfs_ages, word_age_appearances, lemma_age_appearances = getStatisticsForDatabaseOnlyPos(sub_corpora)
 
-    writePaperOutputCsv(ready_dfs_ages, 'ages_csv')
+    writePaperOutputCsv(ready_dfs_ages, 'ages_csv', output_dir)
     print("Ages outputted!")
     #Define age group sub-corpora
 
@@ -1563,7 +1558,7 @@ def formatDataForPaperOutputBasic(corpus: dict[str,pd.DataFrame]):
 
     ready_dfs_groups = getStatisticsForDatabaseOnlyPos(sub_corps, word_age_appearances, lemma_age_appearances)
 
-    writePaperOutputCsv(ready_dfs_groups, 'groups_csv')
+    writePaperOutputCsv(ready_dfs_groups, 'groups_csv', output_dir)
     print("Groups done!")
 
     print("Start registers")
@@ -1578,18 +1573,18 @@ def formatDataForPaperOutputBasic(corpus: dict[str,pd.DataFrame]):
 
     ready_dfs_registers = getStatisticsForDatabaseOnlyPos(sub_corps, word_age_appearances, lemma_age_appearances)
 
-    writePaperOutputCsv(ready_dfs_registers, 'genres_csv')
+    writePaperOutputCsv(ready_dfs_registers, 'genres_csv', output_dir)
     print("Registers done!")
 
     temp_whole = {"Whole":corpus}
     ready_dfs_whole = getStatisticsForDatabaseOnlyPos(temp_whole, word_age_appearances, lemma_age_appearances)
 
-    writePaperOutputCsv(ready_dfs_whole, 'whole_csv')
+    writePaperOutputCsv(ready_dfs_whole, 'whole_csv', output_dir)
     
     print("All done!!")
     #return ready_dfs_ages, ready_dfs_groups, ready_dfs_registers, ready_dfs_whole
 
-def formatDataForPaperOutputWithFeats(corpus: dict[str,pd.DataFrame]):
+def formatDataForPaperOutputWithFeats(corpus: dict[str,pd.DataFrame], output_dir: str):
     """
     Function which takes in a corpus and provides four sets of dictionaries as sets of csv-files:
     1. contains data for exact ages as subcorpora
@@ -1621,7 +1616,7 @@ def formatDataForPaperOutputWithFeats(corpus: dict[str,pd.DataFrame]):
     #Keep track of when words and lemmas first appear in terms of intended reading age
     ready_dfs_ages, word_age_appearances, lemma_age_appearances = getStatisticsForDatabasePosFeats(sub_corpora)
 
-    writePaperOutputCsv(ready_dfs_ages, 'ages_with_features_csv')
+    writePaperOutputCsv(ready_dfs_ages, 'ages_with_features_csv', output_dir)
     print("Ages outputted!")
     #Define age group sub-corpora
 
@@ -1638,7 +1633,7 @@ def formatDataForPaperOutputWithFeats(corpus: dict[str,pd.DataFrame]):
 
     ready_dfs_groups = getStatisticsForDatabasePosFeats(sub_corps, word_age_appearances, lemma_age_appearances)
 
-    writePaperOutputCsv(ready_dfs_groups, 'groups_with_features_csv')
+    writePaperOutputCsv(ready_dfs_groups, 'groups_with_features_csv', output_dir)
     print("Groups done!")
 
     print("Start registers")
@@ -1653,33 +1648,23 @@ def formatDataForPaperOutputWithFeats(corpus: dict[str,pd.DataFrame]):
 
     ready_dfs_registers = getStatisticsForDatabasePosFeats(sub_corps, word_age_appearances, lemma_age_appearances)
 
-    writePaperOutputCsv(ready_dfs_registers, 'genres_with_features_csv')
+    writePaperOutputCsv(ready_dfs_registers, 'genres_with_features_csv', output_dir)
     print("Registers done!")
 
     temp_whole = {"Whole":corpus}
     ready_dfs_whole = getStatisticsForDatabasePosFeats(temp_whole, word_age_appearances, lemma_age_appearances)
 
-    writePaperOutputCsv(ready_dfs_whole, 'whole_with_features_csv')
+    writePaperOutputCsv(ready_dfs_whole, 'whole_with_features_csv', output_dir)
     
     print("All done!!")
     #return ready_dfs_ages, ready_dfs_groups, ready_dfs_registers, ready_dfs_whole
-        
-def writePaperOutputXlsx(ready_dfs: dict[str:pd.DataFrame], name: str):
-    """
-    Simple function for writing xslx-files based on a list of dictionaries
-    Name is the name of the xlsx-file
-    """
-    with pd.ExcelWriter("Data/TCBLex_data_output_"+name+".xlsx") as writer:
-        for df in ready_dfs:
-            ready_dfs[df].to_excel(writer, sheet_name=df, index=False)
-            print(df+" done!")
 
-def writePaperOutputCsv(ready_dfs: dict[str:pd.DataFrame], name: str):
+def writePaperOutputCsv(ready_dfs: dict[str:pd.DataFrame], name: str, parent_folder:str):
     """
     Simple function for writing csv-files based on a list of dictionaries
     Name is the name of the folder containing the csv-files
     """
-    path = "Data/"+name
+    path = parent_folder+"/"+name
     if not os.path.exists(path):
         os.mkdir(path)
     for df in ready_dfs:

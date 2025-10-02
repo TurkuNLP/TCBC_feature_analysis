@@ -18,10 +18,6 @@ from tqdm import tqdm
 
 #Constants
 keylists = []
-with open("NewKeylists_only_novels.jsonl", 'r') as f:
-    for line in f:
-        keylists.append(json.loads(line))
-
 #Helper functions
 
 #Defining functions for the program
@@ -34,11 +30,11 @@ def whitespace_tokenizer(ex):
 def assignLabel(ex):
     age = int(bdf.findAgeFromID(ex))
     if age < 9:
-        return '7-8'
+        return 0
     elif age < 13:
-        return '9-12'
+        return 1
     else:
-        return '13+'
+        return 2
     
 def mapLabels(ex):
     return {'label':[assignLabel(x) for x in ex['book_id']]}
@@ -231,7 +227,7 @@ def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv_novels")
     else:
         base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv")
-    results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf, keylist_type)
+    results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf)
     filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)+"_"+keylist_type
     if tfidf:
         filename += "_tfidf"
@@ -271,10 +267,31 @@ def doFullRun(sniplen: int, tfidf: bool, keylist_type):
 
 #Main function
 def main(cmd_args):
+    #Check which keylist we use!
+    sniplen = int(cmd_args[0])
+    keylist_num = int(cmd_args[1])
+    num_of_rounds = int(cmd_args[2])
+    tfidf = bool(int(cmd_args[3]))
+    keylist_type = cmd_args[4]
+    optimize = bool(int(cmd_args[5]))
+    if keylist_type == 'novels':
+        with open("NewKeylists_only_novels.jsonl", 'r') as f:
+            for line in f:
+                keylists.append(json.loads(line))
+    elif keylist_type == 'without_author':
+        with open("NewKeylists.jsonl", 'r') as f:
+            for line in f:
+                keylists.append(json.loads(line))
+    else:
+        with open("Keylists.jsonl", 'r') as f:
+            for line in f:
+                keylists.append(json.loads(line))
     #For performing the hyperparam optimization
-    #hyperparamOptimize(int(cmd_args[0]), int(cmd_args[1]), int(cmd_args[2]), bool(int(cmd_args[3])))
+    if optimize:
+        hyperparamOptimize(sniplen, keylist_num, num_of_rounds, tfidf, keylist_type)
     #For performing the tests
-    doFullRun(int(cmd_args[0]), bool(int(cmd_args[1])))
+    else:
+        doFullRun(sniplen, tfidf, keylist_type)
     #Manual testing
     #doFullRun(100, 1)
     

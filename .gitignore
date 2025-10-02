@@ -1,5 +1,5 @@
 ClfAddons/
-Conllus/
+Conllus*/
 slurm_archive/
 SnippetDatasets/
 TestResults/
@@ -17,3 +17,4 @@ quickie.ipynb
 TCBC_datasets/
 FinBERT*
 *.jsonl
+Archived*

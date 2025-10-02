@@ -3,6 +3,7 @@ import array
 import itertools
 import warnings
 from numbers import Integral, Real
+from pprint import pprint
 
 import numpy as np
 import scipy.sparse as sp
@@ -187,7 +188,7 @@ class CustomOneVsOneClassifier(OneVsOneClassifier):
                 )
             )
         )
-
+        
         self.estimators_ = estimators_indices[0]
 
         pairwise = self.__sklearn_tags__().input_tags.pairwise
