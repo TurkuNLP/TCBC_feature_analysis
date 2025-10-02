@@ -1,21 +1,10 @@
 #Imports
-from scripts import bookdatafunctions as bdf
-from scripts import corpusMLfunctions as cmf
+from TCBC_tools import Structure, MachineLearning as ml
 import pandas as pd
 import numpy as np
-from datasets import Dataset, disable_progress_bars
+from datasets import Dataset
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import LinearSVC
-from sklearn import metrics
-from sklearn.metrics import f1_score
-import optuna
 import json
-import multiprocessing as mp
-import shutil
-import warnings
-from tqdm import tqdm
-from pprint import pprint
 import sys
 
 #Constants
@@ -37,24 +26,13 @@ def whitespace_tokenizer(ex):
     return ex.split(" ")
 
 def assignLabel(ex):
-    age = int(bdf.findAgeFromID(ex))
+    age = int(Structure.findAgeFromID(ex))
     if age < 9:
         return '7-8'
     elif age < 13:
         return '9-12'
     else:
         return '13+'
-
-def buildDatasetFromRawConllus(conllu_folder, age_mapping_file):
-    to_convert = []
-    isbn2age_series = pd.DataFrame(pd.read_excel(age_mapping_file, index_col=0))
-    for key in os.listdir(conllu_folder):
-        book_id = key[:14] +  str(isbn2age_series.at[int(key[:13]),isbn2age_series.columns[0]]) + key[15:17]
-        age = isbn2age_series.at[int(key[:13]),isbn2age_series.columns[0]]
-        with open(conllu_folder+key, 'r', encoding='UTF-8') as reader:
-            conllu_text = reader.read()
-        to_convert.append({'book_id':book_id, 'data':conllu_text})
-    return Dataset.from_list(to_convert)
     
 def minMaxNormalization(min_vector: list, max_vector:list, feature_vector:list):
     """
@@ -74,8 +52,8 @@ def generateSnippetDatasetFromRawConllu(ex, sniplen):
         conllu = ex['data'][0]
         new_data = []
         label = assignLabel(ex['book_id'][0])
-        df = cmf.snippetConllu2DF(conllu)
-        tree = bdf.buildIdTreeFromConllu(df)
+        df = Structure.snippetConllu2DF(conllu)
+        tree = Structure.buildIdTreeFromConllu(df)
         df.loc[df['upos'] == 'PROPN', 'lemma'] = "[MASK]"
         df.loc[df['upos'] == 'PROPN', 'text'] = "[MASK]"
         conllu_lines = ["\t".join(x) for x in df.to_numpy("str").tolist()]
@@ -88,8 +66,8 @@ def generateSnippetDatasetFromRawConllu(ex, sniplen):
 
 def generateHPFVForDataset(ex):
     conllu = ex['data']
-    df = cmf.snippetConllu2DF(conllu)
-    hpfv = cmf.customConlluVectorizer(df)
+    df = Structure.snippetConllu2DF(conllu)
+    hpfv = ml.customConlluVectorizer(df)
     ex['data'] = hpfv
     return ex
 

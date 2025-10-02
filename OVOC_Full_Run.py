@@ -1,5 +1,4 @@
-from scripts import bookdatafunctions as bdf
-from scripts import corpusMLfunctions as cmf
+from TCBC_tools import Structure
 from scripts import CustomOVOClassifier as covoc
 from datasets import Dataset, logging, disable_progress_bars
 from sklearn.svm import LinearSVC
@@ -28,7 +27,7 @@ def whitespace_tokenizer(ex):
     return ex.split(" ")
 
 def assignLabel(ex):
-    age = int(bdf.findAgeFromID(ex))
+    age = int(Structure.findAgeFromID(ex))
     if age < 9:
         return 0
     elif age < 13:

@@ -1,8 +1,8 @@
 # %%
 #Imports
 from datasets import Dataset, DatasetDict
-from scripts import bookdatafunctions as bdf
 from scripts import corpusMLfunctions as cmf
+from TCBC_tools import Structure
 import transformers
 from pprint import PrettyPrinter
 from sklearn.metrics import classification_report, f1_score, confusion_matrix
@@ -25,7 +25,7 @@ def mapConlluData2RawText(ex):
     return {'data':[conllu2RawText(x) for x in ex['data']]}
 
 def assignLabel(ex):
-    age = int(bdf.findAgeFromID(ex))
+    age = int(Structure.findAgeFromID(ex))
     if age < 9:
         return 1
     elif age < 13:

@@ -7,7 +7,7 @@ from sklearn.metrics import f1_score
 import pandas as pd
 import numpy as np
 from scripts import corpusMLfunctions as cmf
-from scripts import bookdatafunctions as bdf
+from TCBC_tools import Structure, MachineLearning as ml, FeatureExtraction as fe
 import json
 import sys
 
@@ -27,7 +27,7 @@ def trainFinBERT(SPLIT_ID):
         return {'data':[conllu2RawText(x) for x in ex['data']]}
 
     def assignLabel(ex):
-        age = int(bdf.findAgeFromID(ex))
+        age = int(Structure.findAgeFromID(ex))
         if age < 9:
             return 1
         elif age < 13:
@@ -39,10 +39,7 @@ def trainFinBERT(SPLIT_ID):
     def mapLabels(ex):
         return {'label':[assignLabel(x) for x in ex['book_id']]}
 
-    keylists = []
-    with open("Keylists.jsonl", 'r') as f:
-        for line in f:
-            keylists.append(json.loads(line))
+    keylists = ml.getKeylist("Keylists.jsonl")
 
     #Nab keys
     train_keys = keylists[SPLIT_ID]['train_keys']
