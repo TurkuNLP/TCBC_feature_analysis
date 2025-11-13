@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en-GB" xml:lang="en-GB" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>Tree visualization</title>
+
+    <link rel="stylesheet" type="text/css" href="http://universaldependencies.github.io/docs/css/jquery-ui-redmond.css"/>
+    <link rel="stylesheet" type="text/css" href="http://universaldependencies.github.io/docs/css/style.css"/>
+    <link rel="stylesheet" type="text/css" href="http://universaldependencies.github.io/docs/css/style-vis.css"/>
+    <script type="text/javascript" src="http://universaldependencies.github.io/docs/lib/ext/head.load.min.js"></script>
+<!--     <link rel="shortcut icon" href="favicon.ico"/> -->
+  </head>
+  <body>
+    <div id="main" class="center">
+
+      <hr/>
+
+      <div id="content">
+	<noscript>
+	  <div id="noscript">
+	    It appears that you have Javascript disabled.
+	    Please consider enabling Javascript for this page to see the visualizations.
+	  </div>
+	</noscript>
+
+
+       <div class="conllu-parse">
+# text = Sen silmien alle on varastoitu lukemattomat unettomat yöt ja pelottavat päivät.
+1	Sen	se	PRON	Pron	Case=Gen|Number=Sing|PronType=Dem	_	_	_	_
+2	silmien	silmä	NOUN	N	Case=Gen|Number=Plur	_	_	_	_
+3	alle	alle	ADP	Adp	AdpType=Post	_	_	_	_
+4	on	olla	AUX	V	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	_	_	_	_
+5	varastoitu	varastoida	VERB	V	Case=Nom|Degree=Pos|Number=Sing|PartForm=Past|VerbForm=Part|Voice=Pass	0	root	_	_
+6	lukemattomat	lukematon	ADJ*	A	Case=Nom|Derivation=Ton|Number=Plur	_	_	_	_
+7	unettomat	uneton	ADJ*	A	Case=Nom|Degree=Pos|Derivation=Ton|Number=Plur	_	_	_	_
+8	yöt	yö	NOUN	N	Case=Nom|Number=Plur	_	_	_	_
+9	ja	ja	CCONJ	C	_	_	_	_	_
+10	pelottavat	pelottava	ADJ	A	Case=Nom|Degree=Pos|Number=Plur	_	_	_	_
+11	päivät	päivä	NOUN	N	Case=Nom|Number=Plur	_	_	_	_
+12	.	.	PUNCT	Punct	_	_	_	_	_
+
+</div>
+
+
+      </div>
+
+<script type="text/javascript">
+    // TODO pull this stuff from a more reasonable location
+    var root = 'http://spyysalo.github.io/conllu.js/';
+    head.js(
+        // External libraries
+        root + 'lib/ext/jquery.min.js',
+        root + 'lib/ext/jquery.svg.min.js',
+        root + 'lib/ext/jquery.svgdom.min.js',
+        root + 'lib/ext/jquery-ui.min.js',
+        root + 'lib/ext/waypoints.min.js',
+
+        // brat helper modules
+        root + 'lib/brat/configuration.js',
+        root + 'lib/brat/util.js',
+        root + 'lib/brat/annotation_log.js',
+        root + 'lib/ext/webfont.js',
+        // brat modules
+        root + 'lib/brat/dispatcher.js',
+        root + 'lib/brat/url_monitor.js',
+        root + 'lib/brat/visualizer.js',
+
+        // embedding support modules
+        'http://spyysalo.github.io/annodoc/lib/local/annodoc.js',
+	root + 'conllu.js'
+	//root + 'lib/local/config.js'
+    );
+    
+
+    var bratCollData = {
+	'entity_types': [
+// this is optional
+        {
+            'type': 'SPAN_DEFAULT',
+            'bgColor': '#7fa2ff',
+            'borderColor': 'darken'
+        },
+        {
+            'type': 'ARC_DEFAULT',
+            'color': 'black',
+            'arrowHead': 'triangle,4,4',
+            'labelArrow': 'triangle,3,6',
+            'args': [
+                {
+                    'role': 'arg1',
+                    'targets': [ 'token' ]
+                },
+                {
+                    'role': 'arg2',
+                    'targets': [ 'token' ]
+                }
+            ]
+        },
+        {
+            'type': 'token',
+            'labels': [ '\u00A0\u00A0' ], // non-breaking space for empty
+        },
+        {
+            'type': '-',
+            'labels': [ '\u00A0\u00A0' ], // non-breaking space for empty
+        }
+	],
+  'event_attribute_types': [],
+  'entity_attribute_types': [
+        {
+            'type':   'Name',
+            'values': { 
+                'Name' : { 'glyph': '(N)' },
+             },
+         },
+         ],
+	'relation_types': [
+// this is optional
+        ],
+	'event_types': [],
+    };
+
+    var webFontURLs = [
+//        root + 'static/fonts/Astloch-Bold.ttf',
+        root + 'static/fonts/PT_Sans-Caption-Web-Regular.ttf',
+        root + 'static/fonts/Liberation_Sans-Regular.ttf'
+    ];
+
+    /* collection data, not applicable here. */
+    var documentCollections = {};
+
+    head.ready(function() {
+	// performes all embedding and support functions
+	Annodoc.activate(bratCollData, documentCollections);
+    });
+</script>
+
+      <div id="footer">
+          <p class="footer-text">embedded brat &copy; 2010- the <a href="http://brat.nlplab.org/about.html" style="color:gray">brat contributors</a></p>
+      </div>
+    </div>
+  </body>
+</html>
+
