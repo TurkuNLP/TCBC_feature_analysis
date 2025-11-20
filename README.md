@@ -1,8 +1,4 @@
-# Project for feature analysis on the Turku Children's Book Corpus
-
-Due to copyright, we cannot directly share the corpus used in the paper.
-
-However, all results displayed in the various notebooks (.ipynb) have been computed for the original corpus, so the original results can be viewed from them.
+# Project for feature analysis of Finnish children's books
 
 KFA_Experiment.ipnyb contains the codes used to get all the results reported in the Key Feature Analysis section.
 
