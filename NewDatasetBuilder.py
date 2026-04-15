@@ -57,7 +57,7 @@ def main(cmd_args):
     #Read sniplen wanted
     sniplen = int(cmd_args[0])
     #Generate and save to disk sniplen ??
-    Dataset.load_from_disk("cache_dir/RawDataset").map(ml.buildDatasetFromRawConllus, fn_kwargs={"sniplen":sniplen}, batched=True, batch_size=1, remove_columns=['book_id', 'data'], num_proc=len(os.sched_getaffinity(0))).save_to_disk("TCBC_datasets/sniplen"+str(sniplen), num_proc=len(os.sched_getaffinity(0)))
+    ml.buildDatasetFromRawConllus("Conllus_v-1-0/").map(generateSnippetDatasetFromRawConllu, fn_kwargs={"sniplen":sniplen}, batched=True, batch_size=1, remove_columns=['book_id', 'data'], num_proc=len(os.sched_getaffinity(0))).save_to_disk("TCBC_datasets/sniplen"+str(sniplen), num_proc=len(os.sched_getaffinity(0)))
 #Pass cmd args to main function
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -143,10 +143,23 @@ def _fit_ovo_binary(estimator, X, y, i, j, fit_params):
 class CustomOneVsOneClassifier(OneVsOneClassifier):
 
     def __init__(self, estimators, *, n_jobs=None):
-        #Changed to allow classifiers for each pair rather than using the same classifier for all
+        # Changed to allow classifiers for each pair rather than
+        # using the same classifier for all
         self.estimator = estimators
         self.n_jobs = n_jobs
 
+    def __sklearn_tags__(self):
+        """
+        Override because the parent assumes self.estimator is a single
+        sklearn estimator, but we store a dict of estimators.
+        We delegate to any one of the wrapped estimators to get the
+        correct pairwise tag.
+        """
+        tags = super(OneVsOneClassifier, self).__sklearn_tags__()
+        # Pick any one estimator from the dict to check the pairwise tag
+        any_estimator = next(iter(self.estimator.values()))
+        tags.input_tags.pairwise = get_tags(any_estimator).input_tags.pairwise
+        return tags
 
     def fit(self, X, y, **fit_params):
         _raise_for_params(fit_params, self, "fit")
@@ -174,8 +187,7 @@ class CustomOneVsOneClassifier(OneVsOneClassifier):
                 *(
                     Parallel(n_jobs=self.n_jobs)(
                         delayed(_fit_ovo_binary)(
-                            #Changed to allow classifiers for each pair rather than using the same classifier for all
-                            self.estimator[str(i)+"_"+str(j)],
+                            self.estimator[str(i) + "_" + str(j)],
                             X,
                             y,
                             self.classes_[i],
@@ -188,10 +200,24 @@ class CustomOneVsOneClassifier(OneVsOneClassifier):
                 )
             )
         )
-        
+
         self.estimators_ = estimators_indices[0]
 
         pairwise = self.__sklearn_tags__().input_tags.pairwise
         self.pairwise_indices_ = estimators_indices[1] if pairwise else None
 
         return self
+
+    def get_metadata_routing(self):
+        """
+        Override because the parent tries to add self.estimator
+        as a single estimator to the router.
+        """
+        router = MetadataRouter(owner=self.__class__.__name__)
+        for key, est in self.estimator.items():
+            router.add(
+                **{key: est},
+                method_mapping=MethodMapping()
+                .add(callee="fit", caller="fit"),
+            )
+        return router
