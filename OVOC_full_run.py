@@ -84,6 +84,15 @@ def _resolve_dataset_path(sniplen: int, tfidf: bool, keylist_type: str) -> str:
         return f"TCBC_datasets/sniplen{sniplen}_hpfv_novels"
     else:
         return f"TCBC_datasets/sniplen{sniplen}_hpfv"
+
+
+def _resolve_hpo_path(sniplen: int, keylist_type: str, tfidf: bool) -> str:
+    """Single shared HPO result file per sniplen + keylist_type + feature mode."""
+    suffix = "_tfidf" if tfidf else "_hpfv"
+    return (
+        f"TestResults/COVOC_hyperparams/"
+        f"hpo_results_sniplen_{sniplen}_{keylist_type}{suffix}.jsonl"
+    )
     
 
 #Important functions
@@ -130,26 +139,27 @@ def optimize_pair(pair, train_pair_ds, eval_pair_ds, tfidf, num_of_rounds, n_job
         'tol': study.best_params['tol'],
     }
 
-def getOptimHyperparam(base_dataset: Dataset, keylist_num: int, num_of_rounds: int, tfidf: bool):
+def getOptimHyperparam(base_dataset: Dataset, num_of_rounds: int, tfidf: bool):
+    """Run HPO using keylist 0 as the representative train/eval split."""
     n_cpus = len(os.sched_getaffinity(0))
     labels = ['13+', '7-8', '9-12']
-    train_keys = keylists[keylist_num]['train_keys']
-    eval_keys = keylists[keylist_num]['eval_keys']
+    train_keys = keylists[0]['train_keys']
+    eval_keys = keylists[0]['eval_keys']
 
-    logger.info(f'Now arrived at param optimization for keylist: '+str(keylist_num),)
+    logger.info('Now arrived at param optimization (shared across all keylists)')
 
     #Training dataset
-    train_ds = base_dataset.filter(lambda x: x['book_id'] in train_keys, num_proc=len(os.sched_getaffinity(0))).shuffle()
-    train_ds = train_ds.map(mapLabels, batched=True,  num_proc=len(os.sched_getaffinity(0)))
+    train_ds = base_dataset.filter(lambda x: x['book_id'] in train_keys, num_proc=n_cpus).shuffle()
+    train_ds = train_ds.map(mapLabels, batched=True, num_proc=n_cpus)
     if tfidf:
-        train_ds = train_ds.map(mapConlluData2RawLemmas, batched=True,  num_proc=len(os.sched_getaffinity(0)))
+        train_ds = train_ds.map(mapConlluData2RawLemmas, batched=True, num_proc=n_cpus)
     #Evaluation dataset
-    eval_ds = base_dataset.filter(lambda x: x['book_id'] in eval_keys,  num_proc=len(os.sched_getaffinity(0))).shuffle()
-    eval_ds = eval_ds.map(mapLabels, batched=True,  num_proc=len(os.sched_getaffinity(0)))
+    eval_ds = base_dataset.filter(lambda x: x['book_id'] in eval_keys, num_proc=n_cpus).shuffle()
+    eval_ds = eval_ds.map(mapLabels, batched=True, num_proc=n_cpus)
     if tfidf:
-        eval_ds = eval_ds.map(mapConlluData2RawLemmas, batched=True,  num_proc=len(os.sched_getaffinity(0)))
+        eval_ds = eval_ds.map(mapConlluData2RawLemmas, batched=True, num_proc=n_cpus)
 
-    logger.info(f'Datasets have been loaded: '+str(keylist_num),)
+    logger.info('Datasets have been loaded for HPO')
 
     #Filter datasets to fit our needs
     label_pairs = {
@@ -168,9 +178,9 @@ def getOptimHyperparam(base_dataset: Dataset, keylist_num: int, num_of_rounds: i
             num_proc=n_cpus
         ) for key, lset in label_pairs.items()
     }
-    logger.info(f'Datasets have been filtered: '+str(keylist_num),)
+    logger.info('Datasets have been filtered for HPO')
     n_pairs = len(train_dss)  # 3
-    n_jobs_per_pair = max(1, n_cpus // n_pairs)  # ~13 each
+    n_jobs_per_pair = max(1, n_cpus // n_pairs)
 
     with ProcessPoolExecutor(max_workers=n_pairs) as executor:
         futures = {
@@ -229,13 +239,9 @@ def testCOVOC(
         )
 
     
-    # 3.  Load hyperparameters
+    # 3.  Load hyperparameters — now from the SHARED file
     
-    suffix = "_tfidf" if tfidf else "_hpfv"
-    param_file = (
-        f"TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"
-        f"{sniplen}_keylist_{keylist_num}_{keylist_type}{suffix}.jsonl"
-    )
+    param_file = _resolve_hpo_path(sniplen, keylist_type, tfidf)
     with open(param_file, 'r') as reader:
         best_params = [json.loads(line) for line in reader]
 
@@ -255,8 +261,6 @@ def testCOVOC(
         vectorized_train = vectorizer.transform(train_ds['data'])
         vectorized_test = vectorizer.transform(test_ds['data'])
     else:
-        # Build sparse matrices row-by-row to avoid a giant dense
-        # intermediate.  Each row is already a 1-D array/list.
         vectorized_train = sp.sparse.vstack(
             [sp.sparse.csr_array(np.asarray(row, dtype=np.float32).reshape(1, -1))
              for row in train_ds['data']],
@@ -302,27 +306,39 @@ def testCOVOC(
 
     return returnable
     
-def hyperparamOptimize(sniplen: int, keylist_num: int, num_of_rounds: int, tfidf: bool, keylist_type):
-    #Function for coordinating the hyperparameter optimization for each estimator to be used in testing COVOC
+def hyperparamOptimize(sniplen: int, num_of_rounds: int, tfidf: bool, keylist_type: str):
+    """
+    Run HPO once for a given sniplen + keylist_type + feature mode.
+    Uses keylist 0 as the representative train/eval split.
+    Skips entirely if the result file already exists.
+    """
     warnings.filterwarnings('ignore') 
-    os.environ['PYTHONWARNINGS']='ignore'
+    os.environ['PYTHONWARNINGS'] = 'ignore'
     disable_progress_bars()
+
+    filename = _resolve_hpo_path(sniplen, keylist_type, tfidf)
+
+    if os.path.exists(filename):
+        logger.info(
+            f"HPO already done for sniplen={sniplen}, "
+            f"keylist_type={keylist_type}, tfidf={tfidf} — skipping. "
+            f"({filename})"
+        )
+        return
+
     if tfidf:
-        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen))
+        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen" + str(sniplen))
     elif keylist_type == "novels":
-        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv_novels")
+        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen" + str(sniplen) + "_hpfv_novels")
     else:
-        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen"+str(sniplen)+"_hpfv")
-    filename = "TestResults/COVOC_hyperparams/COVOC_hyperparams_sniplen_"+str(sniplen)+"_keylist_"+str(keylist_num)+"_"+keylist_type
-    if tfidf:
-        filename += "_tfidf"
-    else:
-        filename += "_hpfv"
-    filename += ".jsonl"
-    if not os.path.exists(filename):
-        results = getOptimHyperparam(base_dataset, keylist_num, num_of_rounds, tfidf)
-        with open(filename, 'w') as f:
-            f.write('\n'.join(map(json.dumps, results)))
+        base_dataset = Dataset.load_from_disk("TCBC_datasets/sniplen" + str(sniplen) + "_hpfv")
+
+    results = getOptimHyperparam(base_dataset, num_of_rounds, tfidf)
+    with open(filename, 'w') as f:
+        f.write('\n'.join(map(json.dumps, results)))
+
+    logger.info(f"HPO results written to {filename}")
+
 
 def doFullRun(sniplen: int, tfidf: bool, keylist_type: str, keylists: list):
     warnings.filterwarnings('ignore')
@@ -335,7 +351,7 @@ def doFullRun(sniplen: int, tfidf: bool, keylist_type: str, keylists: list):
 
     n_cpus = len(os.sched_getaffinity(0))
     
-    max_workers = min(n_cpus, 40)
+    max_workers = n_cpus
 
     # Pre-convert key lists to sets so every worker, so we do the conversion once instead of 100 times.
     prepared_keylists = [
@@ -401,11 +417,10 @@ def doFullRun(sniplen: int, tfidf: bool, keylist_type: str, keylists: list):
 def main(cmd_args):
     #Check which keylist we use!
     sniplen = int(cmd_args[0])
-    keylist_num = int(cmd_args[1])
-    num_of_rounds = int(cmd_args[2])
-    tfidf = bool(int(cmd_args[3]))
-    keylist_type = cmd_args[4]
-    optimize = bool(int(cmd_args[5]))
+    num_of_rounds = int(cmd_args[1])
+    tfidf = bool(int(cmd_args[2]))
+    keylist_type = cmd_args[3]
+    optimize = bool(int(cmd_args[4]))
     if keylist_type == 'novels':
         with open("NewKeylists_only_novels.jsonl", 'r') as f:
             for line in f:
@@ -420,14 +435,11 @@ def main(cmd_args):
                 keylists.append(json.loads(line))
     #For performing the hyperparam optimization
     if optimize:
-        hyperparamOptimize(sniplen, keylist_num, num_of_rounds, tfidf, keylist_type)
+        hyperparamOptimize(sniplen, num_of_rounds, tfidf, keylist_type)
     #For performing the tests
     else:
         doFullRun(sniplen, tfidf, keylist_type, keylists)
-    #Manual testing
-    #doFullRun(100, 1)
     
 #Pass cmd args to main function
 if __name__ == "__main__":
     main(sys.argv[1:])
-
